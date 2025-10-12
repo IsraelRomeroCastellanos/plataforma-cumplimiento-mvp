@@ -4,6 +4,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import { clienteRoutes } from './routes/cliente.routes';
+import { authRoutes } from './routes/auth.routes';
+import { authenticate } from './middleware/auth.middleware';
 
 dotenv.config();
 
@@ -11,7 +13,8 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://plataforma-cumplimiento-mvp-qj4w.vercel.app']
+  origin: ['http://localhost:3000', 'https://plataforma-cumplimiento-mvp-qj4w.vercel.app'],
+  credentials: true
 }));
 app.use(express.json());
 
@@ -19,10 +22,16 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Rutas
+// Rutas públicas
+app.use(authRoutes(pool));
 app.use(clienteRoutes(pool));
 
-// Rutas de prueba existentes
+// Ruta protegida de ejemplo
+app.get('/api/profile', authenticate, (req, res) => {
+  res.json({ message: 'Acceso autorizado', user: (req as any).user });
+});
+
+// Rutas de prueba
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
