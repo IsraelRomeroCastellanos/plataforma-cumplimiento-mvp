@@ -60,6 +60,10 @@ app.post('/api/cliente', async (req, res) => {
   }
 });
 
+// Al final, antes de app.listen
+app.get('/api/debug-routes', (req, res) => {
+  res.json({ message: 'Backend activo. Endpoint /api/cliente debe existir.' });
+});
 app.listen(port, () => {
   console.log(`✅ Backend corriendo en puerto ${port}`);
 });
