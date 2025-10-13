@@ -1,11 +1,8 @@
-// backend/src/main.ts
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
-import { clienteRoutes } from './routes/cliente.routes';
-import { authRoutes } from './routes/auth.routes';
-import { authenticate } from './middleware/auth.middleware';
+import bcrypt from 'bcrypt';
 
 dotenv.config();
 
@@ -13,8 +10,7 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://plataforma-cumplimiento-mvp-qj4w.vercel.app'],
-  credentials: true
+  origin: ['http://localhost:3000', 'https://plataforma-cumplimiento-mvp-qj4w.vercel.app']
 }));
 app.use(express.json());
 
@@ -22,26 +18,45 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Rutas públicas
-app.use(authRoutes(pool));
-app.use(clienteRoutes(pool));
-
-// Ruta protegida de ejemplo
-app.get('/api/profile', authenticate, (req, res) => {
-  res.json({ message: 'Acceso autorizado', user: (req as any).user });
+// Endpoint de prueba simple
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Backend funcionando' });
 });
 
-// Rutas de prueba
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-app.get('/api/test-db', async (req, res) => {
+// Endpoint de cliente (versión simplificada)
+app.post('/api/cliente', async (req, res) => {
   try {
-    const result = await pool.query('SELECT NOW()');
-    res.json({ db: 'OK', time: result.rows[0].now });
+    const { email, password, nombre_empresa, nombre_cliente } = req.body;
+    
+    if (!email || !password || !nombre_empresa || !nombre_cliente) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios' });
+    }
+
+    // 1. Crear empresa
+    const empresa = await pool.query(
+      'INSERT INTO empresas (nombre_legal) VALUES ($1) RETURNING id',
+      [nombre_empresa]
+    );
+
+    // 2. Hashear contraseña
+    const hash = await bcrypt.hash(password, 10);
+
+    // 3. Crear usuario
+    await pool.query(
+      'INSERT INTO usuarios (email, password_hash, nombre_completo, rol, empresa_id) VALUES ($1, $2, $3, $4, $5)',
+      [email, hash, 'Usuario ' + nombre_cliente, 'cliente', empresa.rows[0].id]
+    );
+
+    // 4. Crear cliente
+    await pool.query(
+      'INSERT INTO clientes (empresa_id, nombre_entidad, tipo_cliente) VALUES ($1, $2, $3)',
+      [empresa.rows[0].id, nombre_cliente, 'persona_fisica']
+    );
+
+    res.status(201).json({ success: true, message: 'Cliente creado' });
   } catch (err) {
-    res.status(500).json({ error: 'DB error', details: (err as Error).message });
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Error interno' });
   }
 });
 
