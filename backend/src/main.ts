@@ -26,9 +26,9 @@ app.get('/api/test', (req, res) => {
 // Endpoint de cliente (versión simplificada)
 app.post('/api/cliente', async (req, res) => {
   try {
-    const { email, password, nombre_empresa, nombre_cliente } = req.body;
+    const { email, password, nombre_completo, nombre_empresa, nombre_cliente } = req.body;
     
-    if (!email || !password || !nombre_empresa || !nombre_cliente) {
+    if (!email || !password || !nombre_completo || !nombre_empresa || !nombre_cliente) {
       return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
 
