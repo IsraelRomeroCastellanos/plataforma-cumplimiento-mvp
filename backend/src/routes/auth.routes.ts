@@ -2,11 +2,13 @@
 import { Router } from 'express';
 import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
-import { generateToken } from '../services/auth.service';
+import jwt from 'jsonwebtoken';
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
 
 export const authRoutes = (pool: Pool) => {
+  // Login
   router.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -16,7 +18,7 @@ export const authRoutes = (pool: Pool) => {
 
     try {
       const result = await pool.query(
-        'SELECT id, email, password_hash, rol FROM usuarios WHERE email = $1',
+        'SELECT id, email, password_hash, rol, empresa_id FROM usuarios WHERE email = $1',
         [email]
       );
 
@@ -31,7 +33,11 @@ export const authRoutes = (pool: Pool) => {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
-      const token = generateToken(user.id, user.email, user.rol);
+      const token = jwt.sign(
+        { userId: user.id, email: user.email, role: user.rol, empresaId: user.empresa_id },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
 
       res.json({
         success: true,
@@ -39,7 +45,8 @@ export const authRoutes = (pool: Pool) => {
         user: {
           id: user.id,
           email: user.email,
-          role: user.rol
+          role: user.rol,
+          empresaId: user.empresa_id
         }
       });
 
