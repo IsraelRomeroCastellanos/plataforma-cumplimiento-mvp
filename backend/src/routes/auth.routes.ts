@@ -16,7 +16,9 @@ export const authRoutes = (pool: Pool) => {
     }
 
     try {
-      // Elimina espacios en blanco para evitar errores silenciosos
+	  console.log('Login recibido:', req.body);
+      
+	  // Elimina espacios en blanco para evitar errores silenciosos
       const cleanEmail = email.trim();
       const cleanPassword = password.trim();
 
