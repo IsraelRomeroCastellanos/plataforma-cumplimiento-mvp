@@ -25,9 +25,9 @@ export default function RegistrarCliente() {
     e.preventDefault();
     try {
       const res = await axios.post('/api/cliente', formData);
-      setMensaje('‚úÖ Cliente registrado exitosamente');
+      setMensaje('? Cliente registrado exitosamente');
     } catch (err: any) {
-      setMensaje('‚ùå Error: ' + (err.response?.data?.error || 'Fall√≥ el registro'));
+      setMensaje('? Error: ' + (err.response?.data?.error || 'FallÛ el registro'));
     }
   };
 
@@ -39,7 +39,7 @@ export default function RegistrarCliente() {
           <label>Email: <input name="email" value={formData.email} onChange={handleChange} required /></label>
         </div>
         <div style={{ marginBottom: '1rem' }}>
-          <label>Contrase√±a: <input name="password" type="password" value={formData.password} onChange={handleChange} required /></label>
+          <label>ContraseÒa: <input name="password" type="password" value={formData.password} onChange={handleChange} required /></label>
         </div>
         <div style={{ marginBottom: '1rem' }}>
           <label>Nombre completo: <input name="nombre_completo" value={formData.nombre_completo} onChange={handleChange} required /></label>
@@ -53,7 +53,7 @@ export default function RegistrarCliente() {
         <div style={{ marginBottom: '1rem' }}>
           <label>Tipo de entidad:
             <select name="tipo_entidad" value={formData.tipo_entidad} onChange={handleChange}>
-              <option value="persona_fisica">Persona F√≠sica</option>
+              <option value="persona_fisica">Persona FÌsica</option>
               <option value="persona_moral">Persona Moral</option>
             </select>
           </label>
@@ -64,17 +64,17 @@ export default function RegistrarCliente() {
         <div style={{ marginBottom: '1rem' }}>
           <label>Tipo de cliente:
             <select name="tipo_cliente" value={formData.tipo_cliente} onChange={handleChange}>
-              <option value="persona_fisica">Persona F√≠sica</option>
+              <option value="persona_fisica">Persona FÌsica</option>
               <option value="persona_moral">Persona Moral</option>
             </select>
           </label>
         </div>
         <div style={{ marginBottom: '1rem' }}>
-          <label>Actividad econ√≥mica: <input name="actividad_economica" value={formData.actividad_economica} onChange={handleChange} /></label>
+          <label>Actividad econÛmica: <input name="actividad_economica" value={formData.actividad_economica} onChange={handleChange} /></label>
         </div>
         <button type="submit">Registrar Cliente</button>
       </form>
-      {mensaje && <p style={{ marginTop: '1rem', color: mensaje.includes('‚úÖ') ? 'green' : 'red' }}>{mensaje}</p>}
+      {mensaje && <p style={{ marginTop: '1rem', color: mensaje.includes('?') ? 'green' : 'red' }}>{mensaje}</p>}
     </div>
   );
 }

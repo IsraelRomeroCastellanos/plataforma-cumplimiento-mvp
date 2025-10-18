@@ -17,12 +17,12 @@ export default function Login() {
       localStorage.setItem('user', JSON.stringify(res.data.user));
       router.push('/dashboard');
     } catch (err: any) {
-      setError('Credenciales inválidas');
+      setError(err.response?.data?.error || 'Error al iniciar sesión');
     }
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '400px', margin: '0 auto' }}>
+    <div style={{ padding: '2rem', maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
       <h2>Iniciar Sesión</h2>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '1rem' }}>
