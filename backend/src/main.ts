@@ -7,7 +7,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { clienteRoutes } from './routes/cliente.routes';
 import { authRoutes } from './routes/auth.routes';
-import { authorizeRoles } from './middleware/role.middleware';	
+import { authorizeRoles } from './middleware/role.middleware';
 
 dotenv.config();
 
@@ -31,7 +31,7 @@ const pool = new Pool({
 app.use(authRoutes(pool));
 app.use(clienteRoutes(pool));
 
-// Endpoint protegido: solo admins
+// Ruta protegida: solo admins
 app.get('/api/admin/usuarios', authorizeRoles('admin'), async (req, res) => {
   try {
     const result = await pool.query(
