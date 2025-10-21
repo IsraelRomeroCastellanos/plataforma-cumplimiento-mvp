@@ -21,13 +21,61 @@ export const adminRoutes = (pool: Pool) => {
     }
   });
 
-  // Listar empresas (para el formulario de creación de usuarios)
+  // Listar empresas
   router.get('/api/admin/empresas', authorizeRoles('admin'), async (req, res) => {
     try {
-      const result = await pool.query('SELECT id, nombre_legal FROM empresas ORDER BY nombre_legal');
+      const result = await pool.query('SELECT id, nombre_legal, rfc, tipo_entidad FROM empresas ORDER BY nombre_legal');
       res.json({ empresas: result.rows });
     } catch (err) {
       console.error('Error al listar empresas:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // Crear empresa
+  router.post('/api/admin/empresas', authorizeRoles('admin'), async (req, res) => {
+    const { nombre_legal, rfc, tipo_entidad } = req.body;
+    if (!nombre_legal || !tipo_entidad) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios' });
+    }
+    if (!['persona_fisica', 'persona_moral'].includes(tipo_entidad)) {
+      return res.status(400).json({ error: 'Tipo de entidad no válido' });
+    }
+    try {
+      const result = await pool.query(
+        'INSERT INTO empresas (nombre_legal, rfc, tipo_entidad) VALUES ($1, $2, $3) RETURNING *',
+        [nombre_legal, rfc || null, tipo_entidad]
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      console.error('Error al crear empresa:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // Editar empresa
+  router.put('/api/admin/empresas/:id', authorizeRoles('admin'), async (req, res) => {
+    const { id } = req.params;
+    const { nombre_legal, rfc, tipo_entidad } = req.body;
+    if (!nombre_legal || !tipo_entidad) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios' });
+    }
+    if (!['persona_fisica', 'persona_moral'].includes(tipo_entidad)) {
+      return res.status(400).json({ error: 'Tipo de entidad no válido' });
+    }
+    try {
+      const check = await pool.query('SELECT id FROM empresas WHERE id = $1', [id]);
+      if (check.rows.length === 0) {
+        return res.status(404).json({ error: 'Empresa no encontrada' });
+      }
+
+      const result = await pool.query(
+        'UPDATE empresas SET nombre_legal = $1, rfc = $2, tipo_entidad = $3, actualizado_en = NOW() WHERE id = $4 RETURNING *',
+        [nombre_legal, rfc || null, tipo_entidad, id]
+      );
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error('Error al editar empresa:', err);
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   });
