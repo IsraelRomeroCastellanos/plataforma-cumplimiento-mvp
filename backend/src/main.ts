@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { clienteRoutes } from './routes/cliente.routes';
 import { authRoutes } from './routes/auth.routes';
+import { adminRoutes } from './routes/admin.routes';
 import { authorizeRoles } from './middleware/role.middleware';
 
 dotenv.config();
@@ -31,18 +32,8 @@ const pool = new Pool({
 app.use(authRoutes(pool));
 app.use(clienteRoutes(pool));
 
-// Ruta protegida: solo admins
-app.get('/api/admin/usuarios', authorizeRoles('admin'), async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT id, email, rol, empresa_id, creado_en FROM usuarios ORDER BY creado_en DESC'
-    );
-    res.json({ usuarios: result.rows });
-  } catch (err) {
-    console.error('Error al listar usuarios:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
+// Rutas administrativas (protegidas)
+app.use(adminRoutes(pool));
 
 // Rutas de diagnóstico
 app.get('/api/health', (req, res) => {
