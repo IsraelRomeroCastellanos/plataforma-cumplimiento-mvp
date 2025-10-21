@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import fileUpload from 'express-fileupload';
 import { clienteRoutes } from './routes/cliente.routes';
 import { authRoutes } from './routes/auth.routes';
 import { adminRoutes } from './routes/admin.routes';
@@ -24,6 +25,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Soporte para subida de archivos
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/'
+}));
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
@@ -32,7 +39,7 @@ const pool = new Pool({
 app.use(authRoutes(pool));
 app.use(clienteRoutes(pool));
 
-// Rutas administrativas (protegidas)
+// Rutas administrativas
 app.use(adminRoutes(pool));
 
 // Rutas de diagnóstico
