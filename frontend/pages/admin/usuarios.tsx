@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
+import Navbar from '../../components/Navbar';
 
 export default function AdminUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -34,40 +35,43 @@ export default function AdminUsuarios() {
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>Consola Administrativa</h1>
-      <p>Gestión de Usuarios</p>
-      <table
-        style={{
-          marginTop: '1rem',
-          width: '100%',
-          borderCollapse: 'collapse',
-          border: '1px solid #ccc'
-        }}
-      >
-        <thead>
-          <tr>
-            <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>ID</th>
-            <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Email</th>
-            <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Rol</th>
-            <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Empresa ID</th>
-            <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Creado</th>
-          </tr>
-        </thead>
-        <tbody>
-          {usuarios.map((u: any) => (
-            <tr key={u.id}>
-              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{u.id}</td>
-              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{u.email}</td>
-              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{u.rol}</td>
-              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{u.empresa_id || '—'}</td>
-              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
-                {new Date(u.creado_en).toLocaleString()}
-              </td>
+    <div>
+      <Navbar />
+      <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
+        <h1>Consola Administrativa</h1>
+        <p>Gestión de Usuarios</p>
+        <table
+          style={{
+            marginTop: '1rem',
+            width: '100%',
+            borderCollapse: 'collapse',
+            border: '1px solid #ccc'
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>ID</th>
+              <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Email</th>
+              <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Rol</th>
+              <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Empresa ID</th>
+              <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Creado</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {usuarios.map((u: any) => (
+              <tr key={u.id}>
+                <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{u.id}</td>
+                <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{u.email}</td>
+                <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{u.rol}</td>
+                <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{u.empresa_id || '—'}</td>
+                <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+                  {new Date(u.creado_en).toLocaleString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
