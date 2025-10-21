@@ -21,6 +21,17 @@ export const adminRoutes = (pool: Pool) => {
     }
   });
 
+  // Listar empresas (para el formulario de creación de usuarios)
+  router.get('/api/admin/empresas', authorizeRoles('admin'), async (req, res) => {
+    try {
+      const result = await pool.query('SELECT id, nombre_legal FROM empresas ORDER BY nombre_legal');
+      res.json({ empresas: result.rows });
+    } catch (err) {
+      console.error('Error al listar empresas:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
   // Crear usuario
   router.post('/api/admin/usuarios', authorizeRoles('admin'), async (req, res) => {
     const { email, password, nombre_completo, rol, empresa_id } = req.body;
