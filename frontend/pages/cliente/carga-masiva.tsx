@@ -6,7 +6,7 @@ import Navbar from '../../components/Navbar';
 
 export default function CargaMasiva() {
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<any[]>([]);
+  const [preview, setPreview] = useState<Record<string, string>[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,7 +43,7 @@ export default function CargaMasiva() {
 
       const data = lines.slice(1).map(line => {
         const values = line.split(',');
-        const row: any = {};
+        const row: Record<string, string> = {}; // 👈 Tipado explícito
         headers.forEach((header, i) => {
           row[header] = values[i] ? values[i].trim() : '';
         });
@@ -136,7 +136,7 @@ Juan Pérez,persona_fisica,venta_de_inmuebles,JP
                   {preview.map((row, i) => (
                     <tr key={i}>
                       {Object.values(row).map((val, j) => (
-                        <td key={j} style={{ border: '1px solid #ccc', padding: '0.25rem' }}>{val}</td>
+                        <td key={j} style={{ border: '1px solid #ccc', padding: '0.25rem' }}>{val}</td> // ✅ val es string
                       ))}
                     </tr>
                   ))}
