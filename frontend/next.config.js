@@ -1,10 +1,9 @@
 // frontend/next.config.js
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async rewrites() {
-    // Usa una URL por defecto para el build local
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-    
     return [
       {
         source: '/api/:path*',
