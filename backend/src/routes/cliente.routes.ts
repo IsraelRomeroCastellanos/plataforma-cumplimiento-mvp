@@ -1,5 +1,5 @@
 // backend/src/routes/cliente.routes.ts
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import { verifyToken } from '../services/auth.service';
@@ -9,7 +9,7 @@ const saltRounds = 10;
 
 export const clienteRoutes = (pool: Pool) => {
   // Registro de cliente (versión simplificada para pruebas)
-  router.post('/api/cliente', async (req, res) => {
+  router.post('/api/cliente', async (req: Request, res: Response) => {
     const client = await pool.connect();
     try {
       const {
@@ -74,7 +74,7 @@ export const clienteRoutes = (pool: Pool) => {
   });
 
   // Carga masiva de clientes
-  router.post('/api/cliente/carga-masiva', async (req, res) => {
+  router.post('/api/cliente/carga-masiva', async (req: Request, res: Response) => {
     // Verificar autenticación
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -93,13 +93,13 @@ export const clienteRoutes = (pool: Pool) => {
 
     const file = req.files.file as any;
     const content = file.data.toString('utf-8');
-    const lines = content.split('\n').filter(line => line.trim() !== '');
+    const lines = content.split('\n').filter((line: string) => line.trim() !== '');
     
     if (lines.length < 2) {
       return res.status(400).json({ error: 'El archivo está vacío o no tiene datos' });
     }
 
-    const headers = lines[0].split(',').map(h => h.trim());
+    const headers = lines[0].split(',').map((h: string) => h.trim());
     const requiredHeaders = ['nombre_entidad', 'tipo_cliente', 'actividad_economica'];
     const missing = requiredHeaders.filter(h => !headers.includes(h));
     if (missing.length > 0) {
@@ -115,8 +115,8 @@ export const clienteRoutes = (pool: Pool) => {
         const values = lines[i].split(',');
         if (values.length < headers.length) continue;
 
-        const row: any = {};
-        headers.forEach((header, j) => {
+        const row: Record<string, string> = {};
+        headers.forEach((header: string, j: number) => {
           row[header] = values[j] ? values[j].trim() : '';
         });
 
@@ -124,11 +124,17 @@ export const clienteRoutes = (pool: Pool) => {
           continue;
         }
 
+        const empresaId = (payload as any).empresaId;
+        if (!empresaId) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'El usuario no tiene empresa asignada' });
+        }
+
         await client.query(
           `INSERT INTO clientes (empresa_id, nombre_entidad, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion, tipo_cliente, actividad_economica, porcentaje_cumplimiento)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)`,
           [
-            payload.empresaId,
+            empresaId,
             row.nombre_entidad,
             row.alias || null,
             row.fecha_nacimiento_constitucion || null,
