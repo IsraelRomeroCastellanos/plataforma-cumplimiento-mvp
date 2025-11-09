@@ -1,5 +1,5 @@
 // backend/src/routes/admin.routes.ts
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import { authorizeRoles } from '../middleware/role.middleware';
@@ -9,10 +9,10 @@ const saltRounds = 10;
 
 export const adminRoutes = (pool: Pool) => {
   // Listar usuarios
-  router.get('/api/admin/usuarios', authorizeRoles('admin'), async (req, res) => {
+  router.get('/api/admin/usuarios', authorizeRoles('admin'), async (req: Request, res: Response) => {
     try {
       const result = await pool.query(
-        'SELECT id, email, rol, empresa_id, creado_en, activo FROM usuarios ORDER BY creado_en DESC'
+        'SELECT id, email, nombre_completo, rol, empresa_id, creado_en, activo FROM usuarios ORDER BY creado_en DESC'
       );
       res.json({ usuarios: result.rows });
     } catch (err) {
@@ -22,7 +22,7 @@ export const adminRoutes = (pool: Pool) => {
   });
 
   // Listar empresas
-  router.get('/api/admin/empresas', authorizeRoles('admin'), async (req, res) => {
+  router.get('/api/admin/empresas', authorizeRoles('admin'), async (req: Request, res: Response) => {
     try {
       const result = await pool.query('SELECT id, nombre_legal, rfc, tipo_entidad FROM empresas ORDER BY nombre_legal');
       res.json({ empresas: result.rows });
@@ -33,7 +33,7 @@ export const adminRoutes = (pool: Pool) => {
   });
 
   // Crear empresa
-  router.post('/api/admin/empresas', authorizeRoles('admin'), async (req, res) => {
+  router.post('/api/admin/empresas', authorizeRoles('admin'), async (req: Request, res: Response) => {
     const { nombre_legal, rfc, tipo_entidad } = req.body;
     if (!nombre_legal || !tipo_entidad) {
       return res.status(400).json({ error: 'Faltan campos obligatorios' });
@@ -54,7 +54,7 @@ export const adminRoutes = (pool: Pool) => {
   });
 
   // Editar empresa
-  router.put('/api/admin/empresas/:id', authorizeRoles('admin'), async (req, res) => {
+  router.put('/api/admin/empresas/:id', authorizeRoles('admin'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { nombre_legal, rfc, tipo_entidad } = req.body;
     if (!nombre_legal || !tipo_entidad) {
@@ -81,7 +81,7 @@ export const adminRoutes = (pool: Pool) => {
   });
 
   // Crear usuario
-  router.post('/api/admin/usuarios', authorizeRoles('admin'), async (req, res) => {
+  router.post('/api/admin/usuarios', authorizeRoles('admin'), async (req: Request, res: Response) => {
     const { email, password, nombre_completo, rol, empresa_id } = req.body;
 
     if (!email || !password || !nombre_completo || !rol) {
@@ -126,7 +126,7 @@ export const adminRoutes = (pool: Pool) => {
   });
 
   // Editar/Desactivar usuario
-  router.put('/api/admin/usuarios/:id', authorizeRoles('admin'), async (req, res) => {
+  router.put('/api/admin/usuarios/:id', authorizeRoles('admin'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { email, nombre_completo, rol, empresa_id, activo } = req.body;
 
@@ -134,6 +134,13 @@ export const adminRoutes = (pool: Pool) => {
       const userCheck = await pool.query('SELECT id FROM usuarios WHERE id = $1', [id]);
       if (userCheck.rows.length === 0) {
         return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      // Validar nombre_completo
+      if (nombre_completo !== undefined) {
+        if (typeof nombre_completo !== 'string' || nombre_completo.trim() === '') {
+          return res.status(400).json({ error: 'El nombre completo no puede estar vacío' });
+        }
       }
 
       if (rol && !['admin', 'consultor', 'cliente'].includes(rol)) {
@@ -155,27 +162,43 @@ export const adminRoutes = (pool: Pool) => {
         }
       }
 
+      // Construir query dinámicamente
       const fields: string[] = [];
       const values: any[] = [];
       let paramIndex = 1;
 
-      if (email !== undefined) fields.push(`email = $${paramIndex++}`);
-      if (nombre_completo !== undefined) fields.push(`nombre_completo = $${paramIndex++}`);
-      if (rol !== undefined) fields.push(`rol = $${paramIndex++}`);
-      if (empresa_id !== undefined) fields.push(`empresa_id = $${paramIndex++}`);
-      if (activo !== undefined) fields.push(`activo = $${paramIndex++}`);
+      if (email !== undefined) {
+        fields.push(`email = $${paramIndex++}`);
+        values.push(email);
+      }
+
+      if (nombre_completo !== undefined) {
+        fields.push(`nombre_completo = $${paramIndex++}`);
+        values.push(nombre_completo);
+      }
+
+      if (rol !== undefined) {
+        fields.push(`rol = $${paramIndex++}`);
+        values.push(rol);
+      }
+
+      if (empresa_id !== undefined) {
+        fields.push(`empresa_id = $${paramIndex++}`);
+        values.push(empresa_id || null);
+      } else if (empresa_id === null) {
+        fields.push(`empresa_id = NULL`);
+      }
+
+      if (activo !== undefined) {
+        fields.push(`activo = $${paramIndex++}`);
+        values.push(activo);
+      }
 
       if (fields.length === 0) {
         return res.status(400).json({ error: 'No se proporcionaron campos para actualizar' });
       }
 
-      values.push(...[
-        email,
-        nombre_completo,
-        rol,
-        empresa_id || null,
-        activo
-      ].filter(v => v !== undefined), id);
+      values.push(id);
 
       const query = `
         UPDATE usuarios 
