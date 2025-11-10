@@ -131,12 +131,26 @@ export const adminRoutes = (pool: Pool) => {
     const { email, nombre_completo, rol, empresa_id, activo } = req.body;
 
     try {
-      const userCheck = await pool.query('SELECT id FROM usuarios WHERE id = $1', [id]);
+      const userCheck = await pool.query('SELECT id, email FROM usuarios WHERE id = $1', [id]);
       if (userCheck.rows.length === 0) {
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
-      // Validar nombre_completo
+      const usuarioActual = userCheck.rows[0];
+      
+      // Protección del usuario raíz
+      if (usuarioActual.email === 'admin@cumplimiento.com') {
+        if (rol !== undefined && rol !== 'admin') {
+          return res.status(403).json({ error: 'El usuario raíz no puede cambiar de rol' });
+        }
+        if (activo !== undefined && !activo) {
+          return res.status(403).json({ error: 'El usuario raíz no puede desactivarse' });
+        }
+        if (email !== undefined && email !== 'admin@cumplimiento.com') {
+          return res.status(403).json({ error: 'El email del usuario raíz no puede modificarse' });
+        }
+      }
+
       if (nombre_completo !== undefined) {
         if (typeof nombre_completo !== 'string' || nombre_completo.trim() === '') {
           return res.status(400).json({ error: 'El nombre completo no puede estar vacío' });
@@ -162,7 +176,6 @@ export const adminRoutes = (pool: Pool) => {
         }
       }
 
-      // Construir query dinámicamente
       const fields: string[] = [];
       const values: any[] = [];
       let paramIndex = 1;
@@ -214,6 +227,43 @@ export const adminRoutes = (pool: Pool) => {
         return res.status(409).json({ error: 'El email ya está registrado' });
       }
       console.error('Error al actualizar usuario:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // Restablecer contraseña de usuario
+  router.post('/api/admin/usuarios/:id/reset-password', authorizeRoles('admin'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    
+    // Protección del usuario raíz
+    const rootCheck = await pool.query(
+      'SELECT email FROM usuarios WHERE id = $1 AND email = $2',
+      [id, 'admin@cumplimiento.com']
+    );
+    if (rootCheck.rows.length > 0) {
+      return res.status(403).json({ error: 'No se puede restablecer la contraseña del usuario raíz' });
+    }
+
+    try {
+      const temporalPassword = 'Temp' + Math.random().toString(36).slice(2, 8) + '!';
+      const passwordHash = await bcrypt.hash(temporalPassword, saltRounds);
+
+      const result = await pool.query(
+        'UPDATE usuarios SET password_hash = $1 WHERE id = $2 RETURNING email',
+        [passwordHash, id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      res.json({ 
+        success: true, 
+        email: result.rows[0].email,
+        temporalPassword
+      });
+    } catch (err) {
+      console.error('Error al restablecer contraseña:', err);
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   });

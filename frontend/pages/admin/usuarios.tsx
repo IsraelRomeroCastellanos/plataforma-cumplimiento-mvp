@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 
+const USUARIO_RAIZ_EMAIL = 'admin@cumplimiento.com';
+
 export default function AdminUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [empresas, setEmpresas] = useState([]);
@@ -18,6 +20,9 @@ export default function AdminUsuarios() {
     rol: 'cliente',
     empresa_id: ''
   });
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetUserId, setResetUserId] = useState<number | null>(null);
+  const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
 
   const router = useRouter();
 
@@ -47,13 +52,11 @@ export default function AdminUsuarios() {
     fetchData();
   }, [router]);
 
-  // Manejar cambios en el formulario
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Abrir modal para crear
   const handleCreate = () => {
     setEditId(null);
     setFormData({
@@ -66,12 +69,11 @@ export default function AdminUsuarios() {
     setShowModal(true);
   };
 
-  // Abrir modal para editar
   const handleEdit = (usuario: any) => {
     setEditId(usuario.id);
     setFormData({
       email: usuario.email,
-      password: '', // No se muestra la contraseña al editar
+      password: '',
       nombre_completo: usuario.nombre_completo,
       rol: usuario.rol,
       empresa_id: usuario.empresa_id?.toString() || ''
@@ -79,8 +81,11 @@ export default function AdminUsuarios() {
     setShowModal(true);
   };
 
-  // Desactivar usuario
-  const handleDeactivate = async (id: number) => {
+  const handleDeactivate = async (id: number, email: string) => {
+    if (email === USUARIO_RAIZ_EMAIL) {
+      alert('El usuario raíz no puede ser desactivado.');
+      return;
+    }
     if (!confirm('¿Está seguro de desactivar este usuario?')) return;
 
     const token = localStorage.getItem('token');
@@ -94,7 +99,52 @@ export default function AdminUsuarios() {
     }
   };
 
-  // Guardar usuario (crear o editar)
+  const handleReactivate = async (id: number, email: string) => {
+    if (email === USUARIO_RAIZ_EMAIL) {
+      alert('El usuario raíz ya está activo.');
+      return;
+    }
+    if (!confirm('¿Está seguro de reactivar este usuario?')) return;
+
+    const token = localStorage.getItem('token');
+    try {
+      await axios.put(`/api/admin/usuarios/${id}`, { activo: true }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsuarios(prev => prev.map(u => u.id === id ? { ...u, activo: true } : u));
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al reactivar usuario');
+    }
+  };
+
+  const handleResetPassword = (userId: number, email: string) => {
+    if (email === USUARIO_RAIZ_EMAIL) {
+      alert('No se puede restablecer la contraseña del usuario raíz.');
+      return;
+    }
+    setResetUserId(userId);
+    setResetResult(null);
+    setShowResetModal(true);
+  };
+
+  const executeResetPassword = async () => {
+    if (!resetUserId) return;
+    
+    const token = localStorage.getItem('token');
+    try {
+      const res = await axios.post(`/api/admin/usuarios/${resetUserId}/reset-password`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setResetResult({
+        email: res.data.email,
+        password: res.data.temporalPassword
+      });
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al restablecer contraseña');
+      setShowResetModal(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
@@ -103,7 +153,15 @@ export default function AdminUsuarios() {
 
     try {
       if (editId) {
-        // Editar
+        const usuarioOriginal = usuarios.find((u: any) => u.id === editId);
+        if (usuarioOriginal?.email === USUARIO_RAIZ_EMAIL) {
+          if (formData.rol !== 'admin' || !formData.email || !formData.nombre_completo) {
+            alert('El usuario raíz no puede modificar su rol ni dejar campos vacíos.');
+            setLoading(false);
+            return;
+          }
+        }
+
         const payload: any = {
           email: formData.email,
           nombre_completo: formData.nombre_completo,
@@ -116,7 +174,6 @@ export default function AdminUsuarios() {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        // Crear
         const payload = {
           ...formData,
           empresa_id: formData.rol === 'cliente' ? (formData.empresa_id ? Number(formData.empresa_id) : null) : null
@@ -126,7 +183,6 @@ export default function AdminUsuarios() {
         });
       }
 
-      // Recargar lista
       const res = await axios.get('/api/admin/usuarios', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -200,28 +256,60 @@ export default function AdminUsuarios() {
                   >
                     Editar
                   </button>
-                  {!u.activo ? null : (
+                  {u.activo ? (
                     <button
-                      onClick={() => handleDeactivate(u.id)}
+                      onClick={() => handleDeactivate(u.id, u.email)}
+                      disabled={u.email === USUARIO_RAIZ_EMAIL}
                       style={{
+                        marginRight: '0.5rem',
                         padding: '0.25rem 0.5rem',
-                        backgroundColor: '#ef4444',
+                        backgroundColor: u.email === USUARIO_RAIZ_EMAIL ? '#9ca3af' : '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: u.email === USUARIO_RAIZ_EMAIL ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      Desactivar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleReactivate(u.id, u.email)}
+                      disabled={u.email === USUARIO_RAIZ_EMAIL}
+                      style={{
+                        marginRight: '0.5rem',
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#10b981',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer'
                       }}
                     >
-                      Desactivar
+                      Reactivar
                     </button>
                   )}
+                  <button
+                    onClick={() => handleResetPassword(u.id, u.email)}
+                    disabled={u.email === USUARIO_RAIZ_EMAIL}
+                    style={{
+                      padding: '0.25rem 0.5rem',
+                      backgroundColor: '#8b5cf6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: u.email === USUARIO_RAIZ_EMAIL ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Restablecer
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        {/* Modal */}
+        {/* Modal de creación/edición */}
         {showModal && (
           <div style={{
             position: 'fixed',
@@ -337,6 +425,86 @@ export default function AdminUsuarios() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Restablecimiento */}
+        {showResetModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '8px',
+              width: '400px'
+            }}>
+              <h2>Restablecer Contraseña</h2>
+              {!resetResult ? (
+                <>
+                  <p>¿Está seguro de restablecer la contraseña de este usuario?</p>
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                    <button
+                      onClick={executeResetPassword}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#8b5cf6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Confirmar
+                    </button>
+                    <button
+                      onClick={() => setShowResetModal(false)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p><strong>¡Contraseña restablecida!</strong></p>
+                  <p><strong>Email:</strong> {resetResult.email}</p>
+                  <p><strong>Nueva contraseña:</strong> <code>{resetResult.password}</code></p>
+                  <p style={{ color: 'red', fontSize: '0.9rem' }}>
+                    Entregue esta contraseña al usuario y pídale que la cambie al iniciar sesión.
+                  </p>
+                  <button
+                    onClick={() => setShowResetModal(false)}
+                    style={{
+                      marginTop: '1rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cerrar
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
