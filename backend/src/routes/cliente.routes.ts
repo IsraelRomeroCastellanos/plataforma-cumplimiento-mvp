@@ -8,7 +8,7 @@ const router = Router();
 const saltRounds = 10;
 
 export const clienteRoutes = (pool: Pool) => {
-  // Registro de cliente (versión simplificada para pruebas)
+  // Registro de cliente (formulario público - solo para pruebas internas)
   router.post('/api/cliente', async (req: Request, res: Response) => {
     const client = await pool.connect();
     try {
@@ -65,6 +65,89 @@ export const clienteRoutes = (pool: Pool) => {
 
       if (err.code === '23505' && err.constraint === 'usuarios_email_key') {
         return res.status(409).json({ error: 'El email ya está registrado' });
+      }
+
+      res.status(500).json({ error: 'Error interno del servidor' });
+    } finally {
+      client.release();
+    }
+  });
+
+  // Registrar cliente unitario (para usuarios autenticados con rol cliente)
+  router.post('/api/cliente/registrar', async (req: Request, res: Response) => {
+    // Verificar autenticación
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+    const token = authHeader.split(' ')[1];
+    const payload = verifyToken(token);
+    if (!payload) {
+      return res.status(401).json({ error: 'Token inválido o expirado' });
+    }
+
+    const {
+      nombre_entidad,
+      tipo_cliente,
+      actividad_economica,
+      alias,
+      fecha_nacimiento_constitucion,
+      nacionalidad,
+      domicilio_mexico,
+      ocupacion
+    } = req.body;
+
+    // Validaciones básicas
+    if (!nombre_entidad || !tipo_cliente || !actividad_economica) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios: nombre_entidad, tipo_cliente, actividad_economica' });
+    }
+
+    if (!['persona_fisica', 'persona_moral'].includes(tipo_cliente)) {
+      return res.status(400).json({ error: 'Tipo de cliente no válido' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Verificar unicidad: mismo nombre_entidad en la misma empresa
+      const duplicateCheck = await client.query(
+        'SELECT id FROM clientes WHERE empresa_id = $1 AND nombre_entidad = $2',
+        [payload.empresaId, nombre_entidad]
+      );
+      if (duplicateCheck.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'Ya existe un cliente con ese nombre en esta empresa' });
+      }
+
+      // Insertar cliente
+      const result = await client.query(
+        `INSERT INTO clientes 
+         (empresa_id, nombre_entidad, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion, tipo_cliente, actividad_economica, porcentaje_cumplimiento, estado)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, 'activo')
+         RETURNING id`,
+        [
+          payload.empresaId,
+          nombre_entidad,
+          alias || null,
+          fecha_nacimiento_constitucion || null,
+          nacionalidad || null,
+          domicilio_mexico || null,
+          ocupacion || null,
+          tipo_cliente,
+          actividad_economica
+        ]
+      );
+
+      await client.query('COMMIT');
+      res.status(201).json({ success: true, clienteId: result.rows[0].id });
+    } catch (err: any) {
+      await client.query('ROLLBACK');
+      console.error('Error al registrar cliente unitario:', err);
+      
+      // Manejo específico de violación de unicidad
+      if (err.code === '23505') {
+        return res.status(409).json({ error: 'Cliente duplicado en esta empresa' });
       }
 
       res.status(500).json({ error: 'Error interno del servidor' });
@@ -130,9 +213,18 @@ export const clienteRoutes = (pool: Pool) => {
           return res.status(400).json({ error: 'El usuario no tiene empresa asignada' });
         }
 
+        // Verificar unicidad en la misma empresa
+        const duplicateCheck = await client.query(
+          'SELECT id FROM clientes WHERE empresa_id = $1 AND nombre_entidad = $2',
+          [empresaId, row.nombre_entidad]
+        );
+        if (duplicateCheck.rows.length > 0) {
+          continue; // Opcional: podrías registrar error
+        }
+
         await client.query(
-          `INSERT INTO clientes (empresa_id, nombre_entidad, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion, tipo_cliente, actividad_economica, porcentaje_cumplimiento)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)`,
+          `INSERT INTO clientes (empresa_id, nombre_entidad, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion, tipo_cliente, actividad_economica, porcentaje_cumplimiento, estado)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, 'activo')`,
           [
             empresaId,
             row.nombre_entidad,
