@@ -44,6 +44,7 @@ export default function Navbar() {
     navItems.push(
       { label: 'Dashboard', href: '/dashboard' },
       { label: 'Mis Clientes', href: '/cliente/clientes' },
+      { label: 'Carga Masiva', href: '/cliente/carga-masiva' },
       { label: 'Transacciones', href: '/cliente/transacciones' },
       { label: 'Reportes', href: '/cliente/reportes' }
     );
