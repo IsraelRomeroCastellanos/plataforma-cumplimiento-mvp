@@ -75,15 +75,14 @@ export const clienteRoutes = (pool: Pool) => {
 
   // Registrar cliente unitario (para usuarios autenticados con rol cliente)
   router.post('/api/cliente/registrar', async (req: Request, res: Response) => {
-    // Verificar autenticación
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Token no proporcionado' });
     }
     const token = authHeader.split(' ')[1];
     const payload = verifyToken(token);
-    if (!payload) {
-      return res.status(401).json({ error: 'Token inválido o expirado' });
+    if (!payload || !payload.empresaId) {
+      return res.status(403).json({ error: 'Acceso denegado' });
     }
 
     const {
@@ -97,9 +96,8 @@ export const clienteRoutes = (pool: Pool) => {
       ocupacion
     } = req.body;
 
-    // Validaciones básicas
     if (!nombre_entidad || !tipo_cliente || !actividad_economica) {
-      return res.status(400).json({ error: 'Faltan campos obligatorios: nombre_entidad, tipo_cliente, actividad_economica' });
+      return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
 
     if (!['persona_fisica', 'persona_moral'].includes(tipo_cliente)) {
@@ -110,7 +108,6 @@ export const clienteRoutes = (pool: Pool) => {
     try {
       await client.query('BEGIN');
 
-      // Verificar unicidad: mismo nombre_entidad en la misma empresa
       const duplicateCheck = await client.query(
         'SELECT id FROM clientes WHERE empresa_id = $1 AND nombre_entidad = $2',
         [payload.empresaId, nombre_entidad]
@@ -120,7 +117,6 @@ export const clienteRoutes = (pool: Pool) => {
         return res.status(409).json({ error: 'Ya existe un cliente con ese nombre en esta empresa' });
       }
 
-      // Insertar cliente
       const result = await client.query(
         `INSERT INTO clientes 
          (empresa_id, nombre_entidad, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion, tipo_cliente, actividad_economica, porcentaje_cumplimiento, estado)
@@ -145,7 +141,6 @@ export const clienteRoutes = (pool: Pool) => {
       await client.query('ROLLBACK');
       console.error('Error al registrar cliente unitario:', err);
       
-      // Manejo específico de violación de unicidad
       if (err.code === '23505') {
         return res.status(409).json({ error: 'Cliente duplicado en esta empresa' });
       }
@@ -158,7 +153,6 @@ export const clienteRoutes = (pool: Pool) => {
 
   // Carga masiva de clientes
   router.post('/api/cliente/carga-masiva', async (req: Request, res: Response) => {
-    // Verificar autenticación
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Token no proporcionado' });
@@ -169,7 +163,6 @@ export const clienteRoutes = (pool: Pool) => {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
 
-    // Verificar que se envió un archivo
     if (!req.files || !req.files.file) {
       return res.status(400).json({ error: 'Archivo no proporcionado' });
     }
@@ -213,13 +206,12 @@ export const clienteRoutes = (pool: Pool) => {
           return res.status(400).json({ error: 'El usuario no tiene empresa asignada' });
         }
 
-        // Verificar unicidad en la misma empresa
         const duplicateCheck = await client.query(
           'SELECT id FROM clientes WHERE empresa_id = $1 AND nombre_entidad = $2',
           [empresaId, row.nombre_entidad]
         );
         if (duplicateCheck.rows.length > 0) {
-          continue; // Opcional: podrías registrar error
+          continue;
         }
 
         await client.query(
@@ -248,6 +240,69 @@ export const clienteRoutes = (pool: Pool) => {
       res.status(500).json({ error: 'Error interno del servidor' });
     } finally {
       client.release();
+    }
+  });
+
+  // Listar clientes de la empresa del usuario
+  router.get('/api/cliente/mis-clientes', async (req: Request, res: Response) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+    const token = authHeader.split(' ')[1];
+    const payload = verifyToken(token);
+    if (!payload || !payload.empresaId) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
+
+    try {
+      const result = await pool.query(
+        'SELECT id, nombre_entidad, tipo_cliente, actividad_economica, estado FROM clientes WHERE empresa_id = $1 ORDER BY nombre_entidad',
+        [payload.empresaId]
+      );
+      res.json({ clientes: result.rows });
+    } catch (err) {
+      console.error('Error al listar clientes:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // Actualizar estado de cliente
+  router.put('/api/cliente/:id/estado', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { estado } = req.body;
+    
+    if (!estado || !['activo', 'inactivo'].includes(estado)) {
+      return res.status(400).json({ error: 'Estado no válido' });
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+    const token = authHeader.split(' ')[1];
+    const payload = verifyToken(token);
+    if (!payload || !payload.empresaId) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
+
+    try {
+      const clientCheck = await pool.query(
+        'SELECT id FROM clientes WHERE id = $1 AND empresa_id = $2',
+        [id, payload.empresaId]
+      );
+      if (clientCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Cliente no encontrado' });
+      }
+
+      await pool.query(
+        'UPDATE clientes SET estado = $1, actualizado_en = NOW() WHERE id = $2',
+        [estado, id]
+      );
+      res.json({ success: true, message: 'Estado actualizado' });
+    } catch (err) {
+      console.error('Error al actualizar estado:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
     }
   });
 
