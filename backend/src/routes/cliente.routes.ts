@@ -73,7 +73,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // Registrar cliente unitario (para usuarios autenticados con rol cliente)
+  // Registrar cliente unitario (para usuarios autenticados)
   router.post('/api/cliente/registrar', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -81,7 +81,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
     const token = authHeader.split(' ')[1];
     const payload = verifyToken(token);
-    if (!payload || !payload.empresaId) {
+    if (!payload || (payload.role !== 'admin' && payload.role !== 'consultor' && payload.role !== 'cliente')) {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
 
@@ -108,9 +108,22 @@ export const clienteRoutes = (pool: Pool) => {
     try {
       await client.query('BEGIN');
 
+      let empresaId;
+      if (payload.role === 'cliente') {
+        empresaId = payload.empresaId;
+      } else {
+        // Admin/Consultor deben especificar empresa_id
+        if (!req.body.empresa_id) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Se requiere empresa_id para admin/consultor' });
+        }
+        empresaId = req.body.empresa_id;
+      }
+
+      // Verificar unicidad en la misma empresa
       const duplicateCheck = await client.query(
         'SELECT id FROM clientes WHERE empresa_id = $1 AND nombre_entidad = $2',
-        [payload.empresaId, nombre_entidad]
+        [empresaId, nombre_entidad]
       );
       if (duplicateCheck.rows.length > 0) {
         await client.query('ROLLBACK');
@@ -123,7 +136,7 @@ export const clienteRoutes = (pool: Pool) => {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, 'activo')
          RETURNING id`,
         [
-          payload.empresaId,
+          empresaId,
           nombre_entidad,
           alias || null,
           fecha_nacimiento_constitucion || null,
@@ -243,7 +256,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // Listar clientes de la empresa del usuario
+  // Listar clientes (accesible para todos los roles)
   router.get('/api/cliente/mis-clientes', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -251,16 +264,27 @@ export const clienteRoutes = (pool: Pool) => {
     }
     const token = authHeader.split(' ')[1];
     const payload = verifyToken(token);
-    if (!payload || !payload.empresaId) {
-      return res.status(403).json({ error: 'Acceso denegado' });
+    if (!payload) {
+      return res.status(401).json({ error: 'Token inválido o expirado' });
     }
 
     try {
-      const result = await pool.query(
-        'SELECT id, nombre_entidad, tipo_cliente, actividad_economica, estado FROM clientes WHERE empresa_id = $1 ORDER BY nombre_entidad',
-        [payload.empresaId]
-      );
-      res.json({ clientes: result.rows });
+      let clientes;
+      if (payload.role === 'cliente' && payload.empresaId) {
+        // Cliente: solo ve sus clientes
+        const result = await pool.query(
+          'SELECT id, nombre_entidad, tipo_cliente, actividad_economica, estado FROM clientes WHERE empresa_id = $1 ORDER BY nombre_entidad',
+          [payload.empresaId]
+        );
+        clientes = result.rows;
+      } else {
+        // Admin/Consultor: ve todos los clientes
+        const result = await pool.query(
+          'SELECT c.id, c.nombre_entidad, c.tipo_cliente, c.actividad_economica, c.estado, e.nombre_legal as empresa FROM clientes c JOIN empresas e ON c.empresa_id = e.id ORDER BY e.nombre_legal, c.nombre_entidad'
+        );
+        clientes = result.rows;
+      }
+      res.json({ clientes });
     } catch (err) {
       console.error('Error al listar clientes:', err);
       res.status(500).json({ error: 'Error interno del servidor' });
@@ -282,17 +306,32 @@ export const clienteRoutes = (pool: Pool) => {
     }
     const token = authHeader.split(' ')[1];
     const payload = verifyToken(token);
-    if (!payload || !payload.empresaId) {
-      return res.status(403).json({ error: 'Acceso denegado' });
+    if (!payload) {
+      return res.status(401).json({ error: 'Token inválido' });
     }
 
     try {
-      const clientCheck = await pool.query(
-        'SELECT id FROM clientes WHERE id = $1 AND empresa_id = $2',
-        [id, payload.empresaId]
-      );
-      if (clientCheck.rows.length === 0) {
-        return res.status(404).json({ error: 'Cliente no encontrado' });
+      let empresaId;
+      if (payload.role === 'cliente') {
+        empresaId = payload.empresaId;
+      } else {
+        // Admin/Consultor pueden gestionar cualquier cliente
+        const check = await pool.query('SELECT empresa_id FROM clientes WHERE id = $1', [id]);
+        if (check.rows.length === 0) {
+          return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+        empresaId = check.rows[0].empresa_id;
+      }
+
+      // Verificar que el cliente pertenece a la empresa (si es cliente)
+      if (payload.role === 'cliente') {
+        const clientCheck = await pool.query(
+          'SELECT id FROM clientes WHERE id = $1 AND empresa_id = $2',
+          [id, empresaId]
+        );
+        if (clientCheck.rows.length === 0) {
+          return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
       }
 
       await pool.query(
