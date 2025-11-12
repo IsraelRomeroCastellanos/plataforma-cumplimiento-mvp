@@ -30,15 +30,21 @@ export default function Navbar() {
       { label: 'Dashboard', href: '/dashboard' },
       { label: 'Gestión de Usuarios', href: '/admin/usuarios' },
       { label: 'Gestión de Empresas', href: '/admin/empresas' },
+      { label: 'Mis Clientes', href: '/cliente/clientes' },
+      { label: 'Carga Masiva', href: '/cliente/carga-masiva' },
       { label: 'Barridos', href: '/admin/barridos' },
-      { label: 'Matrices de Riesgo', href: '/admin/matrices' }
+      { label: 'Matrices de Riesgo', href: '/admin/matrices' },
+      { label: 'Cambiar Contraseña', href: '/cambiar-contrasena' }
     );
   } else if (user.role === 'consultor') {
     navItems.push(
       { label: 'Dashboard', href: '/dashboard' },
       { label: 'Empresas', href: '/consultor/empresas' },
+      { label: 'Mis Clientes', href: '/cliente/clientes' },
+      { label: 'Carga Masiva', href: '/cliente/carga-masiva' },
       { label: 'Alertas', href: '/consultor/alertas' },
-      { label: 'Reportes', href: '/consultor/reportes' }
+      { label: 'Reportes', href: '/consultor/reportes' },
+      { label: 'Cambiar Contraseña', href: '/cambiar-contrasena' }
     );
   } else if (user.role === 'cliente') {
     navItems.push(
@@ -46,7 +52,8 @@ export default function Navbar() {
       { label: 'Mis Clientes', href: '/cliente/clientes' },
       { label: 'Carga Masiva', href: '/cliente/carga-masiva' },
       { label: 'Transacciones', href: '/cliente/transacciones' },
-      { label: 'Reportes', href: '/cliente/reportes' }
+      { label: 'Reportes', href: '/cliente/reportes' },
+      { label: 'Cambiar Contraseña', href: '/cambiar-contrasena' }
     );
   }
 
