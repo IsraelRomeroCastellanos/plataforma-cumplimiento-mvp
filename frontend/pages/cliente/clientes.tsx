@@ -17,7 +17,8 @@ export default function GestionClientes() {
     fecha_nacimiento_constitucion: '',
     nacionalidad: '',
     domicilio_mexico: '',
-    ocupacion: ''
+    ocupacion: '',
+    empresa_id: '' // Para admin/consultor
   });
 
   const router = useRouter();
@@ -26,7 +27,8 @@ export default function GestionClientes() {
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-    if (!token || user.role !== 'cliente') {
+    // ✅ PERMITE ADMIN, CONSULTOR Y CLIENTE
+    if (!token || !['admin', 'consultor', 'cliente'].includes(user.role)) {
       router.push('/login');
       return;
     }
@@ -93,7 +95,8 @@ export default function GestionClientes() {
         fecha_nacimiento_constitucion: '',
         nacionalidad: '',
         domicilio_mexico: '',
-        ocupacion: ''
+        ocupacion: '',
+        empresa_id: ''
       });
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al registrar cliente');
@@ -147,6 +150,9 @@ export default function GestionClientes() {
               <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Nombre</th>
               <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Tipo</th>
               <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Actividad</th>
+              {JSON.parse(localStorage.getItem('user') || '{}').role !== 'cliente' && (
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Empresa</th>
+              )}
               <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Estado</th>
               <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Acciones</th>
             </tr>
@@ -158,6 +164,9 @@ export default function GestionClientes() {
                 <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{c.nombre_entidad}</td>
                 <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{c.tipo_cliente}</td>
                 <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{c.actividad_economica}</td>
+                {JSON.parse(localStorage.getItem('user') || '{}').role !== 'cliente' && (
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{c.empresa}</td>
+                )}
                 <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
                   {c.estado === 'activo' ? '✅' : '❌'}
                 </td>
@@ -276,6 +285,18 @@ export default function GestionClientes() {
                     style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
                   /></label>
                 </div>
+                {/* Solo para admin/consultor */}
+                {JSON.parse(localStorage.getItem('user') || '{}').role !== 'cliente' && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label>Empresa ID: <input
+                      name="empresa_id"
+                      value={formData.empresa_id}
+                      onChange={handleChange}
+                      required
+                      style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
+                    /></label>
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <button
                     type="submit"
