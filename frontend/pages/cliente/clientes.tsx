@@ -18,16 +18,31 @@ export default function GestionClientes() {
     nacionalidad: '',
     domicilio_mexico: '',
     ocupacion: '',
-    empresa_id: '' // Para admin/consultor
+    empresa_id: ''
   });
 
   const router = useRouter();
+  const [userRole, setUserRole] = useState<string | null>(null);
 
+  // Determinar rol del usuario de forma segura (solo en el cliente)
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (typeof window !== 'undefined') {
+      const userRaw = localStorage.getItem('user');
+      if (userRaw) {
+        const user = JSON.parse(userRaw);
+        setUserRole(user.role);
+      }
+    }
+  }, []);
 
-    // ✅ PERMITE ADMIN, CONSULTOR Y CLIENTE
+  // Proteger la ruta y cargar clientes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const token = localStorage.getItem('token');
+    const userRaw = localStorage.getItem('user');
+    const user = userRaw ? JSON.parse(userRaw) : {};
+
     if (!token || !['admin', 'consultor', 'cliente'].includes(user.role)) {
       router.push('/login');
       return;
@@ -60,6 +75,7 @@ export default function GestionClientes() {
     const nuevoEstado = estadoActual === 'activo' ? 'inactivo' : 'activo';
     if (!confirm(`¿Está seguro de ${nuevoEstado === 'activo' ? 'activar' : 'desactivar'} este cliente?`)) return;
 
+    if (typeof window === 'undefined') return;
     const token = localStorage.getItem('token');
     try {
       await axios.put(`/api/cliente/${id}/estado`, { estado: nuevoEstado }, {
@@ -73,6 +89,8 @@ export default function GestionClientes() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (typeof window === 'undefined') return;
+    
     const token = localStorage.getItem('token');
     setLoading(true);
     setError('');
@@ -150,7 +168,7 @@ export default function GestionClientes() {
               <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Nombre</th>
               <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Tipo</th>
               <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Actividad</th>
-              {JSON.parse(localStorage.getItem('user') || '{}').role !== 'cliente' && (
+              {userRole && userRole !== 'cliente' && (
                 <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Empresa</th>
               )}
               <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Estado</th>
@@ -164,7 +182,7 @@ export default function GestionClientes() {
                 <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{c.nombre_entidad}</td>
                 <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{c.tipo_cliente}</td>
                 <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{c.actividad_economica}</td>
-                {JSON.parse(localStorage.getItem('user') || '{}').role !== 'cliente' && (
+                {userRole && userRole !== 'cliente' && (
                   <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{c.empresa}</td>
                 )}
                 <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
@@ -285,8 +303,7 @@ export default function GestionClientes() {
                     style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
                   /></label>
                 </div>
-                {/* Solo para admin/consultor */}
-                {JSON.parse(localStorage.getItem('user') || '{}').role !== 'cliente' && (
+                {userRole && userRole !== 'cliente' && (
                   <div style={{ marginBottom: '1rem' }}>
                     <label>Empresa ID: <input
                       name="empresa_id"
