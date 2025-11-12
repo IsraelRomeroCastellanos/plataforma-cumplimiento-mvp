@@ -9,7 +9,7 @@ const saltRounds = 10;
 
 export const adminRoutes = (pool: Pool) => {
   // Listar usuarios
-  router.get('/api/admin/usuarios', authorizeRoles('admin'), async (req: Request, res: Response) => {
+  router.get('/api/admin/usuarios', authorizeRoles('admin'), async (req, res) => {
     try {
       const result = await pool.query(
         'SELECT id, email, nombre_completo, rol, empresa_id, creado_en, activo FROM usuarios ORDER BY creado_en DESC'
@@ -22,7 +22,7 @@ export const adminRoutes = (pool: Pool) => {
   });
 
   // Listar empresas
-  router.get('/api/admin/empresas', authorizeRoles('admin'), async (req: Request, res: Response) => {
+  router.get('/api/admin/empresas', authorizeRoles('admin'), async (req, res) => {
     try {
       const result = await pool.query('SELECT id, nombre_legal, rfc, tipo_entidad, estado FROM empresas ORDER BY nombre_legal');
       res.json({ empresas: result.rows });
@@ -33,7 +33,7 @@ export const adminRoutes = (pool: Pool) => {
   });
 
   // Crear empresa
-  router.post('/api/admin/empresas', authorizeRoles('admin'), async (req: Request, res: Response) => {
+  router.post('/api/admin/empresas', authorizeRoles('admin'), async (req, res) => {
     const { nombre_legal, rfc, tipo_entidad } = req.body;
     if (!nombre_legal || !tipo_entidad) {
       return res.status(400).json({ error: 'Faltan campos obligatorios' });
@@ -57,7 +57,7 @@ export const adminRoutes = (pool: Pool) => {
   });
 
   // Editar empresa
-  router.put('/api/admin/empresas/:id', authorizeRoles('admin'), async (req: Request, res: Response) => {
+  router.put('/api/admin/empresas/:id', authorizeRoles('admin'), async (req, res) => {
     const { id } = req.params;
     const { nombre_legal, rfc, tipo_entidad, estado } = req.body;
     if (!nombre_legal || !tipo_entidad) {
@@ -90,7 +90,7 @@ export const adminRoutes = (pool: Pool) => {
   });
 
   // Crear usuario
-  router.post('/api/admin/usuarios', authorizeRoles('admin'), async (req: Request, res: Response) => {
+  router.post('/api/admin/usuarios', authorizeRoles('admin'), async (req, res) => {
     const { email, password, nombre_completo, rol, empresa_id } = req.body;
 
     if (!email || !password || !nombre_completo || !rol) {
@@ -135,7 +135,7 @@ export const adminRoutes = (pool: Pool) => {
   });
 
   // Editar/Desactivar usuario
-  router.put('/api/admin/usuarios/:id', authorizeRoles('admin'), async (req: Request, res: Response) => {
+  router.put('/api/admin/usuarios/:id', authorizeRoles('admin'), async (req, res) => {
     const { id } = req.params;
     const { email, nombre_completo, rol, empresa_id, activo } = req.body;
 
@@ -223,7 +223,7 @@ export const adminRoutes = (pool: Pool) => {
   });
 
   // Restablecer contraseña de usuario
-  router.post('/api/admin/usuarios/:id/reset-password', authorizeRoles('admin'), async (req: Request, res: Response) => {
+  router.post('/api/admin/usuarios/:id/reset-password', authorizeRoles('admin'), async (req, res) => {
     const { id } = req.params;
     
     // 🔒 PROTECCIÓN DEL USUARIO RAÍZ

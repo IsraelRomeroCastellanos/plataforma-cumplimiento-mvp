@@ -2,7 +2,8 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
-import { authorizeRoles } from '../middleware/role.middleware';
+import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from '../services/auth.service';
 import { verifyToken } from '../services/auth.service';
 
 const router = Router();
@@ -74,7 +75,7 @@ export const authRoutes = (pool: Pool) => {
   });
 
   // Cambiar contraseña
-  router.post('/api/cambiar-contrasena', async (req: Request, res: Response) => {
+  router.post('/api/cambiar-contrasena', async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Token no proporcionado' });
