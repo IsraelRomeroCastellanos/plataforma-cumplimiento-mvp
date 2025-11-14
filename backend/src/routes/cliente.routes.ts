@@ -81,7 +81,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
     const token = authHeader.split(' ')[1];
     const payload = verifyToken(token);
-    if (!payload || (payload.role !== 'admin' && payload.role !== 'consultor' && payload.role !== 'cliente')) {
+    if (!payload || !['admin', 'consultor', 'cliente'].includes(payload.role)) {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
 
@@ -172,7 +172,8 @@ export const clienteRoutes = (pool: Pool) => {
     }
     const token = authHeader.split(' ')[1];
     const payload = verifyToken(token);
-    if (!payload || payload.role !== 'cliente') {
+    // ✅ Permitir admin, consultor y cliente
+    if (!payload || !['admin', 'consultor', 'cliente'].includes(payload.role)) {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
 
@@ -181,7 +182,8 @@ export const clienteRoutes = (pool: Pool) => {
     }
 
     const file = req.files.file as any;
-    const content = file.data.toString('utf-8');
+    // ✅ Codificación UTF-8 correcta
+    const content = file.data.toString('utf8');
     const lines = content.split('\n').filter((line: string) => line.trim() !== '');
     
     if (lines.length < 2) {
@@ -213,7 +215,19 @@ export const clienteRoutes = (pool: Pool) => {
           continue;
         }
 
-        const empresaId = (payload as any).empresaId;
+        let empresaId;
+        if (payload.role === 'cliente') {
+          empresaId = (payload as any).empresaId;
+        } else {
+          // Admin/Consultor: empresa_id debe estar en la fila del CSV o en el payload
+          if (row.empresa_id) {
+            empresaId = parseInt(row.empresa_id);
+          } else {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Se requiere empresa_id en el CSV para admin/consultor' });
+          }
+        }
+
         if (!empresaId) {
           await client.query('ROLLBACK');
           return res.status(400).json({ error: 'El usuario no tiene empresa asignada' });
@@ -229,7 +243,7 @@ export const clienteRoutes = (pool: Pool) => {
 
         await client.query(
           `INSERT INTO clientes (empresa_id, nombre_entidad, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion, tipo_cliente, actividad_economica, porcentaje_cumplimiento, estado)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, 'activo')`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'activo')`,
           [
             empresaId,
             row.nombre_entidad,
@@ -239,7 +253,8 @@ export const clienteRoutes = (pool: Pool) => {
             row.domicilio_mexico || null,
             row.ocupacion || null,
             row.tipo_cliente,
-            row.actividad_economica
+            row.actividad_economica,
+            0
           ]
         );
         successCount++;
