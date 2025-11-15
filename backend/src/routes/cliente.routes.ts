@@ -181,11 +181,11 @@ export const clienteRoutes = (pool: Pool) => {
     const file = req.files.file as any;
     // ✅ Soporte UTF-8 correcto
     const content = file.data.toString('utf8');
-    // ✅ Mejor validación de líneas vacías
+    // ✅ Tipado explícito para evitar TS7006
     const lines = content
       .split('\n')
-      .map(line => line.trim())
-      .filter(line => line !== '');
+      .map((line: string) => line.trim())
+      .filter((line: string) => line !== '');
     
     if (lines.length < 2) {
       return res.status(400).json({ error: 'El archivo debe tener encabezado y al menos una fila de datos' });
