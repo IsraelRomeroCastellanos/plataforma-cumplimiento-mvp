@@ -112,7 +112,6 @@ export const clienteRoutes = (pool: Pool) => {
       if (payload.role === 'cliente') {
         empresaId = payload.empresaId;
       } else {
-        // Admin/Consultor deben especificar empresa_id
         if (!req.body.empresa_id) {
           await client.query('ROLLBACK');
           return res.status(400).json({ error: 'Se requiere empresa_id para admin/consultor' });
@@ -120,7 +119,6 @@ export const clienteRoutes = (pool: Pool) => {
         empresaId = req.body.empresa_id;
       }
 
-      // Verificar unicidad en la misma empresa
       const duplicateCheck = await client.query(
         'SELECT id FROM clientes WHERE empresa_id = $1 AND nombre_entidad = $2',
         [empresaId, nombre_entidad]
@@ -172,7 +170,6 @@ export const clienteRoutes = (pool: Pool) => {
     }
     const token = authHeader.split(' ')[1];
     const payload = verifyToken(token);
-    // ✅ Permitir admin, consultor y cliente
     if (!payload || !['admin', 'consultor', 'cliente'].includes(payload.role)) {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
@@ -182,12 +179,16 @@ export const clienteRoutes = (pool: Pool) => {
     }
 
     const file = req.files.file as any;
-    // ✅ Codificación UTF-8 correcta
+    // ✅ Soporte UTF-8 correcto
     const content = file.data.toString('utf8');
-    const lines = content.split('\n').filter((line: string) => line.trim() !== '');
+    // ✅ Mejor validación de líneas vacías
+    const lines = content
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line !== '');
     
     if (lines.length < 2) {
-      return res.status(400).json({ error: 'El archivo está vacío o no tiene datos' });
+      return res.status(400).json({ error: 'El archivo debe tener encabezado y al menos una fila de datos' });
     }
 
     const headers = lines[0].split(',').map((h: string) => h.trim());
@@ -219,7 +220,6 @@ export const clienteRoutes = (pool: Pool) => {
         if (payload.role === 'cliente') {
           empresaId = (payload as any).empresaId;
         } else {
-          // Admin/Consultor: empresa_id debe estar en la fila del CSV o en el payload
           if (row.empresa_id) {
             empresaId = parseInt(row.empresa_id);
           } else {
@@ -286,14 +286,12 @@ export const clienteRoutes = (pool: Pool) => {
     try {
       let clientes;
       if (payload.role === 'cliente' && payload.empresaId) {
-        // Cliente: solo ve sus clientes
         const result = await pool.query(
           'SELECT id, nombre_entidad, tipo_cliente, actividad_economica, estado FROM clientes WHERE empresa_id = $1 ORDER BY nombre_entidad',
           [payload.empresaId]
         );
         clientes = result.rows;
       } else {
-        // Admin/Consultor: ve todos los clientes
         const result = await pool.query(
           'SELECT c.id, c.nombre_entidad, c.tipo_cliente, c.actividad_economica, c.estado, e.nombre_legal as empresa FROM clientes c JOIN empresas e ON c.empresa_id = e.id ORDER BY e.nombre_legal, c.nombre_entidad'
         );
@@ -330,7 +328,6 @@ export const clienteRoutes = (pool: Pool) => {
       if (payload.role === 'cliente') {
         empresaId = payload.empresaId;
       } else {
-        // Admin/Consultor pueden gestionar cualquier cliente
         const check = await pool.query('SELECT empresa_id FROM clientes WHERE id = $1', [id]);
         if (check.rows.length === 0) {
           return res.status(404).json({ error: 'Cliente no encontrado' });
@@ -338,7 +335,6 @@ export const clienteRoutes = (pool: Pool) => {
         empresaId = check.rows[0].empresa_id;
       }
 
-      // Verificar que el cliente pertenece a la empresa (si es cliente)
       if (payload.role === 'cliente') {
         const clientCheck = await pool.query(
           'SELECT id FROM clientes WHERE id = $1 AND empresa_id = $2',
