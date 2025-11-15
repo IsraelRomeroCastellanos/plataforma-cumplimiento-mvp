@@ -18,7 +18,7 @@ app.use(cors({
   credentials: true
 }));
 
-// ✅ fileUpload ANTES de express.json()
+// ✅ fileUpload antes de express.json()
 app.use(fileUpload({ useTempFiles: true, tempFileDir: '/tmp/' }));
 app.use(express.json());
 
@@ -28,8 +28,20 @@ app.use(authRoutes(pool));
 app.use(clienteRoutes(pool));
 app.use(adminRoutes(pool));
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK' });
+// ✅ Formulario de carga masiva directo en Render
+app.get('/carga-masiva', (req, res) => {
+  res.send(`
+    <html>
+      <head><title>Carga Masiva - Backend</title></head>
+      <body>
+        <h2>Carga Masiva de Clientes</h2>
+        <form action="/api/carga-directa" method="post" enctype="multipart/form-data">
+          <input type="file" name="file" accept=".csv" required>
+          <button type="submit">Subir CSV</button>
+        </form>
+      </body>
+    </html>
+  `);
 });
 
 app.listen(port, () => {
