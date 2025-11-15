@@ -3,11 +3,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import fileUpload from 'express-fileupload';
-import { clienteRoutes } from './routes/cliente.routes';
+
+// Rutas
 import { authRoutes } from './routes/auth.routes';
+import { clienteRoutes } from './routes/cliente.routes';
 import { adminRoutes } from './routes/admin.routes';
 
 dotenv.config();
@@ -15,6 +15,7 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Middleware
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -24,21 +25,23 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// ✅ Middleware para subida de archivos (debe estar antes de las rutas)
 app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: '/tmp/'
 }));
 
+// Conexión a la base de datos
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Rutas
+// Registro de rutas
 app.use(authRoutes(pool));
-app.use(clienteRoutes(pool));
+app.use(clienteRoutes(pool)); // ← Cliente routes debe devolver un Router
 app.use(adminRoutes(pool));
 
-// Diagnóstico
+// Rutas de diagnóstico
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
