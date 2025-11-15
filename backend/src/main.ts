@@ -9,7 +9,6 @@ import fileUpload from 'express-fileupload';
 import { clienteRoutes } from './routes/cliente.routes';
 import { authRoutes } from './routes/auth.routes';
 import { adminRoutes } from './routes/admin.routes';
-import { authorizeRoles } from './middleware/role.middleware';
 
 dotenv.config();
 
@@ -25,7 +24,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Soporte para subida de archivos
 app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: '/tmp/'
@@ -35,14 +33,12 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Rutas públicas
+// Rutas
 app.use(authRoutes(pool));
 app.use(clienteRoutes(pool));
-
-// Rutas administrativas
 app.use(adminRoutes(pool));
 
-// Rutas de diagnóstico
+// Diagnóstico
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
