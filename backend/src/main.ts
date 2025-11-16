@@ -4,43 +4,48 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import fileUpload from 'express-fileupload';
-import { authRoutes } from './routes/auth.routes';
-import { clienteRoutes } from './routes/cliente.routes';
-import { adminRoutes } from './routes/admin.routes';
 
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 10000;
 
+// ✅ Configuración crítica para Render
 app.use(cors({
   origin: ['http://localhost:3000', 'https://plataforma-cumplimiento-mvp-qj4w.vercel.app'],
   credentials: true
 }));
 
-// ✅ fileUpload antes de express.json()
-app.use(fileUpload({ useTempFiles: true, tempFileDir: '/tmp/' }));
-app.use(express.json());
+// ✅ fileUpload con límites y debug
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/',
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  abortOnLimit: false,
+  debug: true, // Muestra logs en Render
+  safeFileNames: true,
+  preserveExtension: true
+}));
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+app.use(express.json({ limit: '50mb' }));
 
-app.use(authRoutes(pool));
-app.use(clienteRoutes(pool));
-app.use(adminRoutes(pool));
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-// ✅ Formulario de carga masiva directo en Render
-app.get('/carga-masiva', (req, res) => {
+// Rutas
+app.use(require('./routes/auth.routes').authRoutes(pool));
+app.use(require('./routes/cliente.routes').clienteRoutes(pool));
+app.use(require('./routes/admin.routes').adminRoutes(pool));
+
+// Formulario de prueba
+app.get('/carga-masiva-directa', (req, res) => {
   res.send(`
-    <html>
-      <head><title>Carga Masiva - Backend</title></head>
-      <body>
-        <h2>Carga Masiva de Clientes</h2>
-        <form action="/api/carga-directa" method="post" enctype="multipart/form-data">
-          <input type="file" name="file" accept=".csv" required>
-          <button type="submit">Subir CSV</button>
-        </form>
-      </body>
-    </html>
+    <form action="/api/carga-directa" method="post" enctype="multipart/form-data">
+      <input type="file" name="file" accept=".csv" required>
+      <button type="submit">Subir</button>
+    </form>
   `);
 });
 

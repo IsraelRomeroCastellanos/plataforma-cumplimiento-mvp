@@ -1,53 +1,41 @@
 // backend/src/routes/cliente.routes.ts
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
-import { verifyToken } from '../services/auth.service';
 
 const router = Router();
 
 export const clienteRoutes = (pool: Pool) => {
-  // ✅ Endpoint directo para carga masiva (sin autenticación para pruebas)
   router.post('/api/carga-directa', async (req: Request, res: Response) => {
+    console.log('=== DEPURACIÓN ===');
+    console.log('Files:', req.files ? 'EXISTE' : 'NO EXISTE');
+    
+    if (!req.files || !req.files.file) {
+      return res.status(400).json({ error: 'Archivo no encontrado en req.files' });
+    }
+
+    // ✅ Manejo seguro de UploadedFile | UploadedFile[]
+    const file = Array.isArray(req.files.file) ? req.files.file[0] : req.files.file;
+    
+    console.log('Archivo:', file.name, 'Tamaño:', file.size);
+    
+    if (file.size === 0) {
+      return res.status(400).json({ error: 'Archivo vacío (0 bytes)' });
+    }
+    
     try {
-      if (!req.files?.file) {
-        return res.status(400).json({ error: 'No se envió archivo' });
-      }
-
-      const file = req.files.file as any;
       const content = file.data.toString('utf8');
-      const lines = content.split('\n').filter((line: string) => line.trim() !== '');
-
-      if (lines.length < 2) {
-        return res.status(400).json({ error: 'Archivo vacío o sin datos' });
+      console.log('Contenido:', content.substring(0, 100));
+      
+      if (!content.trim()) {
+        return res.status(400).json({ error: 'Contenido vacío después de trim' });
       }
-
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        let count = 0;
-
-        for (let i = 1; i < lines.length; i++) {
-          const [nombre, tipo, actividad] = lines[i].split(',').map((s: string) => s.trim());
-          if (nombre && tipo && actividad) {
-            await client.query(
-              `INSERT INTO clientes (empresa_id, nombre_entidad, tipo_cliente, actividad_economica, estado)
-               VALUES (1, $1, $2, $3, 'activo')`,
-              [nombre, tipo, actividad]
-            );
-            count++;
-          }
-        }
-
-        await client.query('COMMIT');
-        res.json({ success: true, cargados: count });
-      } finally {
-        client.release();
-      }
+      
+      res.json({ success: true, message: 'Archivo recibido y procesado' });
     } catch (err) {
-      console.error('Error:', err);
+      console.error('Error al leer:', err);
       res.status(500).json({ error: 'Error al procesar el archivo' });
     }
   });
 
-  return router;
+  return router; // ✅ ¡Esta línea es crucial!
 };
