@@ -4,15 +4,12 @@ import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../services/auth.service';
-import { verifyToken } from '../services/auth.service';
 
 const router = Router();
 
 export const authRoutes = (pool: Pool) => {
-  // Login
-  router.post('/api/login', async (req, res) => {
+  router.post('/api/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
-
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña son requeridos' });
     }
@@ -28,31 +25,13 @@ export const authRoutes = (pool: Pool) => {
       }
 
       const user = result.rows[0];
-      const cleanPassword = password.trim();
-      const cleanEmail = email.trim();
-
-      const isValid = await new Promise<boolean>((resolve, reject) => {
-        bcrypt.compare(cleanPassword, user.password_hash, (err, isMatch) => {
-          if (err) {
-            console.error('Error en comparación de contraseña:', err);
-            reject(err);
-          } else {
-            resolve(isMatch);
-          }
-        });
-      });
-
+      const isValid = await bcrypt.compare(password, user.password_hash);
       if (!isValid) {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
       const token = jwt.sign(
-        {
-          userId: user.id,
-          email: user.email,
-          role: user.rol,
-          empresaId: user.empresa_id
-        },
+        { userId: user.id, email: user.email, role: user.rol, empresaId: user.empresa_id },
         JWT_SECRET,
         { expiresIn: '24h' }
       );
@@ -67,27 +46,24 @@ export const authRoutes = (pool: Pool) => {
           empresaId: user.empresa_id
         }
       });
-
     } catch (err) {
       console.error('Error en login:', err);
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   });
 
-  // Cambiar contraseña
-  router.post('/api/cambiar-contrasena', async (req, res) => {
+  router.post('/api/cambiar-contrasena', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Token no proporcionado' });
     }
     const token = authHeader.split(' ')[1];
-    const payload = verifyToken(token);
+    const payload = jwt.verify(token, JWT_SECRET) as any;
     if (!payload) {
       return res.status(401).json({ error: 'Token inválido' });
     }
 
     const { contrasenaActual, nuevaContrasena } = req.body;
-    
     if (!contrasenaActual || !nuevaContrasena) {
       return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }

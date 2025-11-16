@@ -20,11 +20,9 @@ export const clienteRoutes = (pool: Pool) => {
     }
 
     try {
-      // Leer contenido como UTF-8
       let content = file.data.toString('utf8');
-      console.log('Contenido bruto (primeros 200 chars):', JSON.stringify(content.substring(0, 200)));
+      console.log('Contenido bruto:', JSON.stringify(content.substring(0, 100)));
 
-      // Eliminar BOM UTF-8 si existe
       if (content.charCodeAt(0) === 0xFEFF) {
         content = content.slice(1);
       }
@@ -32,16 +30,13 @@ export const clienteRoutes = (pool: Pool) => {
         content = content.substring(3);
       }
 
-      // Dividir en líneas y limpiar
       const lines = content.split('\n').map(line => line.trim()).filter(line => line !== '');
-      console.log('Líneas procesadas:', lines.length);
       console.log('Líneas:', lines);
 
       if (lines.length < 2) {
         return res.status(400).json({ error: 'El archivo debe tener encabezado y al menos una fila de datos' });
       }
 
-      // Procesar datos
       const client = await pool.connect();
       try {
         await client.query('BEGIN');

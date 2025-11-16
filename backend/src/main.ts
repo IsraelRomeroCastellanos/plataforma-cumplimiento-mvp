@@ -4,6 +4,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import fileUpload from 'express-fileupload';
+import { authRoutes } from './routes/auth.routes';
+import { clienteRoutes } from './routes/cliente.routes';
+import { adminRoutes } from './routes/admin.routes';
 
 dotenv.config();
 
@@ -28,11 +31,10 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-app.use(require('./routes/auth.routes')(pool));
-app.use(require('./routes/cliente.routes')(pool));
-app.use(require('./routes/admin.routes')(pool));
+app.use(authRoutes(pool));
+app.use(clienteRoutes(pool));
+app.use(adminRoutes(pool));
 
-// Formulario de prueba
 app.get('/carga-masiva-directa', (req, res) => {
   res.send(`
     <form action="/api/carga-directa" method="post" enctype="multipart/form-data">
