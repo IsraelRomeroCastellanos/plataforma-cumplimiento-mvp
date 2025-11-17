@@ -55,10 +55,11 @@ export default function GestionClientes() {
         });
         setClientes(res.data.clientes);
       } catch (err: any) {
-        setError(err.response?.data?.error || 'Error al cargar clientes');
+        console.error('Error detallado al cargar clientes:', err);
+        setError(err.response?.data?.error || err.message || 'Error al cargar clientes');
       }
     };
-
+    
     fetchClientes();
   }, [router]);
 

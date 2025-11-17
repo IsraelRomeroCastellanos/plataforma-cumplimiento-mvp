@@ -7,16 +7,14 @@ import Navbar from '../../components/Navbar';
 export default function CargaMasiva() {
   const [file, setFile] = useState<File | null>(null);
   const [csvContent, setCsvContent] = useState('');
+  const [preview, setPreview] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // ✅ Función para descargar CSV de ejemplo
   const downloadExample = () => {
-    const csvContent = `nombre_entidad,tipo_cliente,actividad_economica
-Joyeros de México,persona_moral,venta_de_joyas
-María López,persona_fisica,servicios_profesionales`;
+    const csvContent = `nombre_entidad,tipo_cliente,actividad_economica\nJoyeros de México,persona_moral,venta_de_joyas\nMaría López,persona_fisica,servicios_profesionales`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -45,6 +43,8 @@ María López,persona_fisica,servicios_profesionales`;
     reader.onload = (event) => {
       const text = event.target?.result as string;
       setCsvContent(text);
+      const lines = text.split('\n').slice(0, 5);
+      setPreview(lines);
     };
     reader.readAsText(selectedFile, 'utf-8');
   };
@@ -73,6 +73,7 @@ María López,persona_fisica,servicios_profesionales`;
       setSuccess(`✅ ${res.data.message}`);
       setFile(null);
       setCsvContent('');
+      setPreview([]);
       (document.getElementById('fileInput') as HTMLInputElement).value = '';
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al procesar el archivo');
@@ -89,12 +90,6 @@ María López,persona_fisica,servicios_profesionales`;
         <p>Sube un archivo CSV con la siguiente estructura:</p>
         <ul>
           <li><strong>Campos obligatorios</strong>: nombre_entidad, tipo_cliente, actividad_economica</li>
-          <li><strong>Ejemplo</strong>:
-            <pre style={{ backgroundColor: '#f1f1f1', padding: '0.5rem', fontSize: '0.9rem' }}>
-nombre_entidad,tipo_cliente,actividad_economica
-Juan Pérez,persona_fisica,venta_de_inmuebles
-            </pre>
-          </li>
         </ul>
 
         <div style={{ marginBottom: '1rem' }}>
@@ -102,15 +97,16 @@ Juan Pérez,persona_fisica,venta_de_inmuebles
             type="button"
             onClick={downloadExample}
             style={{
-              padding: '0.5rem 1rem',
+              padding: '10px 16px',
               backgroundColor: '#3b82f6',
               color: 'white',
               border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px'
             }}
           >
-            Descargar CSV de Ejemplo
+            📥 Descargar CSV de Ejemplo
           </button>
         </div>
 
@@ -125,8 +121,19 @@ Juan Pérez,persona_fisica,venta_de_inmuebles
               style={{ marginLeft: '0.5rem', width: '100%', maxWidth: '300px' }}
             />
           </div>
-          {error && <p style={{ color: 'red' }}>{error}</p>}
-          {success && <p style={{ color: 'green' }}>{success}</p>}
+
+          {preview.length > 0 && (
+            <div style={{ marginTop: '1rem', padding: '10px', backgroundColor: '#f9f9f9', borderRadius: '4px' }}>
+              <strong>Vista previa (primeras 5 líneas):</strong>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                {preview.join('\n')}
+              </pre>
+            </div>
+          )}
+
+          {error && <p style={{ color: 'red', marginTop: '1rem' }}>{error}</p>}
+          {success && <p style={{ color: 'green', marginTop: '1rem' }}>{success}</p>}
+          
           <button
             type="submit"
             disabled={loading || !csvContent}
@@ -137,7 +144,7 @@ Juan Pérez,persona_fisica,venta_de_inmuebles
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
-              marginTop: '0.5rem'
+              marginTop: '1rem'
             }}
           >
             {loading ? 'Procesando...' : 'Subir Clientes'}
