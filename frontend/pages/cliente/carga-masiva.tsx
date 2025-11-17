@@ -1,16 +1,15 @@
 // frontend/pages/cliente/carga-masiva.tsx
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 
 export default function CargaMasiva() {
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<Record<string, string>[]>([]);
+  const [csvContent, setCsvContent] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,38 +25,18 @@ export default function CargaMasiva() {
     setError('');
     setSuccess('');
 
-    // Leer y previsualizar el archivo
+    // Leer el archivo como texto
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim() !== '');
-      const headers = lines[0].split(',').map(h => h.trim());
-      
-      // Validar encabezados mínimos
-      const requiredHeaders = ['nombre_entidad', 'tipo_cliente', 'actividad_economica'];
-      const missing = requiredHeaders.filter(h => !headers.includes(h));
-      if (missing.length > 0) {
-        setError(`Faltan columnas requeridas: ${missing.join(', ')}`);
-        return;
-      }
-
-      const data = lines.slice(1).map(line => {
-        const values = line.split(',');
-        const row: Record<string, string> = {}; // 👈 Tipado explícito
-        headers.forEach((header, i) => {
-          row[header] = values[i] ? values[i].trim() : '';
-        });
-        return row;
-      });
-
-      setPreview(data.slice(0, 5)); // Mostrar solo primeras 5 filas
+      setCsvContent(text);
     };
-    reader.readAsText(selectedFile);
+    reader.readAsText(selectedFile, 'utf-8');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) {
+    if (!csvContent) {
       setError('Selecciona un archivo CSV');
       return;
     }
@@ -72,20 +51,15 @@ export default function CargaMasiva() {
     setError('');
     setSuccess('');
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const res = await axios.post('/api/cliente/carga-masiva', formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
+      const res = await axios.post('/api/carga-directa', { csvContent }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      setSuccess(`✅ ${res.data.successCount} clientes cargados exitosamente`);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      setFile(null);
-      setPreview([]);
+      setSuccess(`✅ ${res.data.message}`);
+      if (file) {
+        (document.getElementById('fileInput') as HTMLInputElement).value = '';
+      }
+      setCsvContent('');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al cargar el archivo');
     } finally {
@@ -101,52 +75,31 @@ export default function CargaMasiva() {
         <p>Sube un archivo CSV con la siguiente estructura:</p>
         <ul>
           <li><strong>Campos obligatorios</strong>: nombre_entidad, tipo_cliente, actividad_economica</li>
-          <li><strong>Campos opcionales</strong>: alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion</li>
           <li><strong>Ejemplo</strong>:
             <pre style={{ backgroundColor: '#f1f1f1', padding: '0.5rem' }}>
-nombre_entidad,tipo_cliente,actividad_economica,alias
-Juan Pérez,persona_fisica,venta_de_inmuebles,JP
+nombre_entidad,tipo_cliente,actividad_economica
+Juan Pérez,persona_fisica,venta_de_inmuebles
             </pre>
           </li>
         </ul>
 
         <form onSubmit={handleSubmit} style={{ marginTop: '1rem' }}>
           <div style={{ marginBottom: '1rem' }}>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              ref={fileInputRef}
-            />
+            <label>Archivo CSV:
+              <input
+                id="fileInput"
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                style={{ marginLeft: '0.5rem' }}
+              />
+            </label>
           </div>
           {error && <p style={{ color: 'red' }}>{error}</p>}
           {success && <p style={{ color: 'green' }}>{success}</p>}
-          {preview.length > 0 && (
-            <div style={{ marginTop: '1rem' }}>
-              <h3>Vista previa (primeras 5 filas):</h3>
-              <table style={{ width: '100%', border: '1px solid #ccc', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    {Object.keys(preview[0]).map(key => (
-                      <th key={key} style={{ border: '1px solid #ccc', padding: '0.25rem' }}>{key}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.map((row, i) => (
-                    <tr key={i}>
-                      {Object.values(row).map((val, j) => (
-                        <td key={j} style={{ border: '1px solid #ccc', padding: '0.25rem' }}>{val}</td> // ✅ val es string
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
           <button
             type="submit"
-            disabled={loading || !file}
+            disabled={loading || !csvContent}
             style={{
               padding: '0.5rem 1rem',
               backgroundColor: '#10b981',
