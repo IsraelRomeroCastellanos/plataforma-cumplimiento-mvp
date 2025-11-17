@@ -18,9 +18,11 @@ app.use(cors({
   credentials: true
 }));
 
+// ✅ Middleware fileUpload ANTES de express.json()
 app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: '/tmp/',
+  debug: true,
   limits: { fileSize: 50 * 1024 * 1024 }
 }));
 
@@ -42,6 +44,10 @@ app.get('/carga-masiva-directa', (req, res) => {
       <button type="submit">Subir CSV</button>
     </form>
   `);
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 app.listen(port, () => {
