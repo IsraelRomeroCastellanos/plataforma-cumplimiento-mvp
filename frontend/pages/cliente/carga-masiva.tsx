@@ -12,6 +12,22 @@ export default function CargaMasiva() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // ✅ Función para descargar CSV de ejemplo
+  const downloadExample = () => {
+    const csvContent = `nombre_entidad,tipo_cliente,actividad_economica
+Joyeros de México,persona_moral,venta_de_joyas
+María López,persona_fisica,servicios_profesionales`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'ejemplo_clientes.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -25,7 +41,6 @@ export default function CargaMasiva() {
     setError('');
     setSuccess('');
 
-    // Leer el archivo como texto (UTF-8)
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
@@ -56,7 +71,6 @@ export default function CargaMasiva() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSuccess(`✅ ${res.data.message}`);
-      // Limpiar formulario
       setFile(null);
       setCsvContent('');
       (document.getElementById('fileInput') as HTMLInputElement).value = '';
@@ -82,6 +96,23 @@ Juan Pérez,persona_fisica,venta_de_inmuebles
             </pre>
           </li>
         </ul>
+
+        <div style={{ marginBottom: '1rem' }}>
+          <button
+            type="button"
+            onClick={downloadExample}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Descargar CSV de Ejemplo
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} style={{ marginTop: '1rem' }}>
           <div style={{ marginBottom: '1rem' }}>
