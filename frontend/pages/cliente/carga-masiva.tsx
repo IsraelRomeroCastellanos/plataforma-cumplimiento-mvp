@@ -25,7 +25,7 @@ export default function CargaMasiva() {
     setError('');
     setSuccess('');
 
-    // Leer el archivo como texto
+    // Leer el archivo como texto (UTF-8)
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
@@ -36,14 +36,14 @@ export default function CargaMasiva() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!csvContent) {
-      setError('Selecciona un archivo CSV');
-      return;
-    }
-
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
+      return;
+    }
+
+    if (!csvContent) {
+      setError('Selecciona un archivo CSV válido');
       return;
     }
 
@@ -56,12 +56,12 @@ export default function CargaMasiva() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSuccess(`✅ ${res.data.message}`);
-      if (file) {
-        (document.getElementById('fileInput') as HTMLInputElement).value = '';
-      }
+      // Limpiar formulario
+      setFile(null);
       setCsvContent('');
+      (document.getElementById('fileInput') as HTMLInputElement).value = '';
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al cargar el archivo');
+      setError(err.response?.data?.error || 'Error al procesar el archivo');
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ export default function CargaMasiva() {
         <ul>
           <li><strong>Campos obligatorios</strong>: nombre_entidad, tipo_cliente, actividad_economica</li>
           <li><strong>Ejemplo</strong>:
-            <pre style={{ backgroundColor: '#f1f1f1', padding: '0.5rem' }}>
+            <pre style={{ backgroundColor: '#f1f1f1', padding: '0.5rem', fontSize: '0.9rem' }}>
 nombre_entidad,tipo_cliente,actividad_economica
 Juan Pérez,persona_fisica,venta_de_inmuebles
             </pre>
@@ -85,15 +85,14 @@ Juan Pérez,persona_fisica,venta_de_inmuebles
 
         <form onSubmit={handleSubmit} style={{ marginTop: '1rem' }}>
           <div style={{ marginBottom: '1rem' }}>
-            <label>Archivo CSV:
-              <input
-                id="fileInput"
-                type="file"
-                accept=".csv"
-                onChange={handleFileChange}
-                style={{ marginLeft: '0.5rem' }}
-              />
-            </label>
+            <label htmlFor="fileInput">Seleccionar archivo CSV:</label>
+            <input
+              id="fileInput"
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              style={{ marginLeft: '0.5rem', width: '100%', maxWidth: '300px' }}
+            />
           </div>
           {error && <p style={{ color: 'red' }}>{error}</p>}
           {success && <p style={{ color: 'green' }}>{success}</p>}
@@ -106,10 +105,11 @@ Juan Pérez,persona_fisica,venta_de_inmuebles
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              marginTop: '0.5rem'
             }}
           >
-            {loading ? 'Cargando...' : 'Subir Clientes'}
+            {loading ? 'Procesando...' : 'Subir Clientes'}
           </button>
         </form>
       </div>
