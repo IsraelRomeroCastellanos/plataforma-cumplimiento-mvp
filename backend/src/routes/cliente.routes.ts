@@ -5,7 +5,6 @@ import { Pool } from 'pg';
 const router = Router();
 
 export const clienteRoutes = (pool: Pool) => {
-  // ✅ Carga masiva SIN express-fileupload (solo texto plano)
   router.post('/api/carga-directa', async (req: Request, res: Response) => {
     console.log('=== CARGA MASIVA SIN FILEUPLOAD ===');
     
@@ -15,10 +14,11 @@ export const clienteRoutes = (pool: Pool) => {
     }
 
     try {
+      // ✅ Tipado explícito para evitar TS7006
       const lines = csvContent
         .split('\n')
-        .map(line => line.trim())
-        .filter(line => line !== '');
+        .map((line: string) => line.trim())
+        .filter((line: string) => line !== '');
 
       if (lines.length < 2) {
         return res.status(400).json({ 
@@ -32,19 +32,35 @@ export const clienteRoutes = (pool: Pool) => {
         let successCount = 0;
 
         for (let i = 1; i < lines.length; i++) {
-          const [nombre, tipo, actividad] = lines[i].split(',').map(s => s.trim());
-          if (nombre && tipo && actividad && ['persona_fisica', 'persona_moral'].includes(tipo)) {
-            await client.query(
-              `INSERT INTO clientes (empresa_id, nombre_entidad, tipo_cliente, actividad_economica, estado)
-               VALUES (1, $1, $2, $3, 'activo')`,
-              [nombre, tipo, actividad]
-            );
-            successCount++;
+          // ✅ Tipado explícito
+          const values = lines[i].split(',').map((s: string) => s.trim());
+          if (values.length < 3) continue;
+
+          const nombre_entidad = values[0];
+          const tipo_cliente = values[1];
+          const actividad_economica = values[2];
+
+          if (!nombre_entidad || !tipo_cliente || !actividad_economica) {
+            continue;
           }
+
+          if (!['persona_fisica', 'persona_moral'].includes(tipo_cliente)) {
+            continue;
+          }
+
+          await client.query(
+            `INSERT INTO clientes (empresa_id, nombre_entidad, tipo_cliente, actividad_economica, estado)
+             VALUES (1, $1, $2, $3, 'activo')`,
+            [nombre_entidad, tipo_cliente, actividad_economica]
+          );
+          successCount++;
         }
 
         await client.query('COMMIT');
-        res.json({ success: true, message: `✅ ${successCount} cliente(s) cargado(s)` });
+        res.json({ 
+          success: true, 
+          message: `✅ ${successCount} cliente(s) cargado(s)` 
+        });
       } finally {
         client.release();
       }
