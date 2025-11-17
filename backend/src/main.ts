@@ -3,7 +3,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
-import fileUpload from 'express-fileupload';
 import { authRoutes } from './routes/auth.routes';
 import { clienteRoutes } from './routes/cliente.routes';
 import { adminRoutes } from './routes/admin.routes';
@@ -13,17 +12,14 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 10000;
 
+// ✅ CORS con soporte para pruebas locales y producción
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://plataforma-cumplimiento-mvp-qj4w.vercel.app'],
+  origin: [
+    'http://localhost:3000',    // Frontend en desarrollo
+    'http://localhost:8080',    // Pruebas HTML locales
+    'https://plataforma-cumplimiento-mvp-qj4w.vercel.app' // Producción
+  ],
   credentials: true
-}));
-
-// ✅ Middleware fileUpload ANTES de express.json()
-app.use(fileUpload({
-  useTempFiles: true,
-  tempFileDir: '/tmp/',
-  debug: true,
-  limits: { fileSize: 50 * 1024 * 1024 }
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -37,17 +33,9 @@ app.use(authRoutes(pool));
 app.use(clienteRoutes(pool));
 app.use(adminRoutes(pool));
 
-app.get('/carga-masiva-directa', (req, res) => {
-  res.send(`
-    <form action="/api/carga-directa" method="post" enctype="multipart/form-data">
-      <input type="file" name="file" accept=".csv" required>
-      <button type="submit">Subir CSV</button>
-    </form>
-  `);
-});
-
+// Endpoint de salud
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ status: 'OK' });
 });
 
 app.listen(port, () => {
