@@ -7,7 +7,7 @@ import { JWT_SECRET } from '../services/auth.service';
 const router = Router();
 
 export const clienteRoutes = (pool: Pool) => {
-  // ✅ Descargar plantilla Excel
+  // ✅ Descargar plantilla Excel (con tipado explícito)
   router.get('/api/cliente/plantilla', async (req, res) => {
     try {
       const ExcelJS = require('exceljs');
@@ -22,7 +22,8 @@ export const clienteRoutes = (pool: Pool) => {
         { header: 'Alias', key: 'alias', width: 20 }
       ];
 
-      worksheet.getColumn('tipo_cliente').eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+      // ✅ Tipado explícito para evitar TS7006
+      worksheet.getColumn('tipo_cliente').eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, rowNumber: number) => {
         if (rowNumber > 1) {
           cell.dataValidation = {
             type: 'list',
@@ -35,7 +36,7 @@ export const clienteRoutes = (pool: Pool) => {
         }
       });
 
-      worksheet.getColumn('estado_bien').eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+      worksheet.getColumn('estado_bien').eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, rowNumber: number) => {
         if (rowNumber > 1) {
           cell.dataValidation = {
             type: 'list',
