@@ -13,7 +13,7 @@ export default function CargaMasiva() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // ✅ Descarga directa de CSV con instrucciones
+  // ✅ Genera CSV directamente en el navegador (sin backend)
   const downloadTemplate = () => {
     const csvContent = `nombre_entidad,tipo_cliente,actividad_economica,estado_bien,alias
 Joyeros de México,persona_moral,venta_de_joyas,Nuevo,
