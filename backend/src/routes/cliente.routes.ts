@@ -21,7 +21,6 @@ export const clienteRoutes = (pool: Pool) => {
         { header: 'Alias', key: 'alias', width: 20 }
       ];
 
-      // ✅ Validaciones CORRECTAS para Excel
       worksheet.getColumn('B').eachCell({ includeEmpty: true }, (cell, rowNumber) => {
         if (rowNumber > 1) {
           cell.dataValidation = {
@@ -60,5 +59,18 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // ... resto del código (carga masiva, listar clientes, etc.) ...
+  router.post('/api/carga-directa', async (req, res) => {
+    // ... código de carga masiva ...
+  });
+
+  router.get('/api/cliente/mis-clientes', async (req, res) => {
+    // ... código de listar clientes ...
+  });
+
+  router.put('/api/cliente/:id/estado', async (req, res) => {
+    // ... código de actualizar estado ...
+  });
+
+  // ✅ ¡DEVUELVE EL ROUTER!
+  return router;
 };
