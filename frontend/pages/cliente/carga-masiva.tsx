@@ -16,6 +16,11 @@ export default function CargaMasiva() {
   const downloadTemplate = async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Debes iniciar sesión');
+        return;
+      }
+      
       const response = await fetch('/api/cliente/plantilla', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
