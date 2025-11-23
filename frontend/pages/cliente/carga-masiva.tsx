@@ -13,17 +13,29 @@ export default function CargaMasiva() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const downloadExample = () => {
-    const csvContent = `nombre_entidad,tipo_cliente,actividad_economica\nJoyeros de México,persona_moral,venta_de_joyas\nMaría López,persona_fisica,servicios_profesionales`;
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'ejemplo_clientes.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // ✅ Corregido: usa el endpoint correcto
+  const downloadTemplate = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/cliente/plantilla', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error('Error al descargar');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'plantilla_clientes.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error:', err);
+      setError('No se pudo descargar la plantilla');
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,7 +107,7 @@ export default function CargaMasiva() {
         <div style={{ marginBottom: '1rem' }}>
           <button
             type="button"
-            onClick={downloadExample}
+            onClick={downloadTemplate}
             style={{
               padding: '10px 16px',
               backgroundColor: '#3b82f6',
@@ -106,7 +118,7 @@ export default function CargaMasiva() {
               fontSize: '14px'
             }}
           >
-            📥 Descargar CSV de Ejemplo
+            📥 Descargar Plantilla Excel (.xlsx)
           </button>
         </div>
 
