@@ -8,12 +8,13 @@ import { JWT_SECRET } from '../services/auth.service';
 const router = Router();
 
 export const clienteRoutes = (pool: Pool) => {
-  // ✅ Descargar plantilla Excel
+  // ✅ Descargar plantilla Excel (CORREGIDO: validaciones en columnas completas)
   router.get('/api/cliente/plantilla', async (req, res) => {
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Clientes');
 
+      // Definir columnas
       worksheet.columns = [
         { header: 'Nombre del Cliente *', key: 'nombre_entidad', width: 30 },
         { header: 'Tipo de Cliente *', key: 'tipo_cliente', width: 20 },
@@ -22,8 +23,10 @@ export const clienteRoutes = (pool: Pool) => {
         { header: 'Alias', key: 'alias', width: 20 }
       ];
 
-      worksheet.getColumn('tipo_cliente').eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, rowNumber: number) => {
-        if (rowNumber > 1) {
+      // ✅ Aplicar validaciones a toda la columna (hasta fila 1000)
+      const tipoClienteCol = worksheet.getColumn('B'); // Columna B = tipo_cliente
+      tipoClienteCol.eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+        if (rowNumber > 1) { // Excluir encabezado
           cell.dataValidation = {
             type: 'list',
             allowBlank: true,
@@ -35,8 +38,9 @@ export const clienteRoutes = (pool: Pool) => {
         }
       });
 
-      worksheet.getColumn('estado_bien').eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, rowNumber: number) => {
-        if (rowNumber > 1) {
+      const estadoBienCol = worksheet.getColumn('D'); // Columna D = estado_bien
+      estadoBienCol.eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+        if (rowNumber > 1) { // Excluir encabezado
           cell.dataValidation = {
             type: 'list',
             allowBlank: true,
@@ -48,8 +52,10 @@ export const clienteRoutes = (pool: Pool) => {
         }
       });
 
+      // Formato de encabezado
       worksheet.getRow(1).font = { bold: true };
 
+      // Generar buffer y enviar
       const buf = await workbook.xlsx.writeBuffer();
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', 'attachment; filename=plantilla_clientes.xlsx');
@@ -60,7 +66,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // ✅ Carga masiva (sin archivo binario)
+  // ✅ Resto del código (carga masiva, listar clientes, etc.)
   router.post('/api/carga-directa', async (req: Request, res: Response) => {
     const { csvContent } = req.body;
     if (!csvContent) {
@@ -120,7 +126,6 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // ✅ Listar clientes para TODOS los roles
   router.get('/api/cliente/mis-clientes', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -159,7 +164,6 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // ✅ Actualizar estado de cliente
   router.put('/api/cliente/:id/estado', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { estado } = req.body;
