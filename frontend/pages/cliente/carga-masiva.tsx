@@ -13,33 +13,24 @@ export default function CargaMasiva() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const downloadTemplate = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Debes iniciar sesión');
-        return;
-      }
-      
-      const response = await fetch('/api/cliente/plantilla', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!response.ok) throw new Error('Error al descargar');
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'plantilla_clientes.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error('Error:', err);
-      setError('No se pudo descargar la plantilla');
-    }
+  // ✅ Descarga directa de CSV con instrucciones
+  const downloadTemplate = () => {
+    const csvContent = `nombre_entidad,tipo_cliente,actividad_economica,estado_bien,alias
+Joyeros de México,persona_moral,venta_de_joyas,Nuevo,
+María López,persona_fisica,servicios_profesionales,Usado,
+# Reglas:
+# - tipo_cliente: persona_fisica o persona_moral
+# - estado_bien: Nuevo, Usado, Viejo
+`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'plantilla_clientes.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,8 +49,10 @@ export default function CargaMasiva() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      setCsvContent(text);
-      const lines = text.split('\n').slice(0, 5);
+      // Eliminar líneas de instrucciones (#)
+      const cleanText = text.split('\n').filter(line => !line.trim().startsWith('#')).join('\n');
+      setCsvContent(cleanText);
+      const lines = cleanText.split('\n').slice(0, 5);
       setPreview(lines);
     };
     reader.readAsText(selectedFile, 'utf-8');
@@ -106,6 +99,7 @@ export default function CargaMasiva() {
         <p>Sube un archivo CSV con la siguiente estructura:</p>
         <ul>
           <li><strong>Campos obligatorios</strong>: nombre_entidad, tipo_cliente, actividad_economica</li>
+          <li><strong>Campos opcionales</strong>: estado_bien, alias</li>
         </ul>
 
         <div style={{ marginBottom: '1rem' }}>
@@ -122,7 +116,7 @@ export default function CargaMasiva() {
               fontSize: '14px'
             }}
           >
-            📥 Descargar Plantilla Excel (.xlsx)
+            📥 Descargar Plantilla CSV de Ejemplo
           </button>
         </div>
 
