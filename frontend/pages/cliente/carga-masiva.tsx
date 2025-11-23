@@ -13,7 +13,6 @@ export default function CargaMasiva() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // ✅ Corregido: usa el endpoint correcto
   const downloadTemplate = async () => {
     try {
       const token = localStorage.getItem('token');

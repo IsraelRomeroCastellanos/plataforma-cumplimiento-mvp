@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
+import fileUpload from 'express-fileupload';
 import { authRoutes } from './routes/auth.routes';
 import { clienteRoutes } from './routes/cliente.routes';
 import { adminRoutes } from './routes/admin.routes';
@@ -12,14 +13,20 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 10000;
 
-// ✅ CORS con soporte para pruebas locales y producción
 app.use(cors({
   origin: [
-    'http://localhost:3000',    // Frontend en desarrollo
-    'http://localhost:8080',    // Pruebas HTML locales
-    'https://plataforma-cumplimiento-mvp-qj4w.vercel.app' // Producción
+    'http://localhost:3000',
+    'http://localhost:8080',
+    'https://plataforma-cumplimiento-mvp-qj4w.vercel.app'
   ],
   credentials: true
+}));
+
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/',
+  debug: true,
+  limits: { fileSize: 50 * 1024 * 1024 }
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -29,11 +36,11 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
+// ✅ Registro de rutas CORRECTO
 app.use(authRoutes(pool));
-app.use(clienteRoutes(pool));
+app.use(clienteRoutes(pool)); // ← Devuelve un Router
 app.use(adminRoutes(pool));
 
-// Endpoint de salud
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK' });
 });
