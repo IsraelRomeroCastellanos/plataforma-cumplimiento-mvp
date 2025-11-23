@@ -13,7 +13,7 @@ export default function CargaMasiva() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // ✅ Genera CSV directamente en el navegador (sin backend)
+  // ✅ Genera CSV con UTF-8 + BOM y 5 columnas
   const downloadTemplate = () => {
     const csvContent = `nombre_entidad,tipo_cliente,actividad_economica,estado_bien,alias
 Joyeros de México,persona_moral,venta_de_joyas,Nuevo,
@@ -22,7 +22,9 @@ María López,persona_fisica,servicios_profesionales,Usado,
 # - tipo_cliente: persona_fisica o persona_moral
 # - estado_bien: Nuevo, Usado, Viejo
 `;
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // ✅ BOM UTF-8 para evitar caracteres corruptos
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
