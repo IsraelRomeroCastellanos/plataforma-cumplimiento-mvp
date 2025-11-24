@@ -7,8 +7,39 @@ import { JWT_SECRET } from '../services/auth.service';
 
 const router = Router();
 
+// ✅ Función para parsear fechas en formato DD/MM/YYYY
+const parseDate = (dateStr: string): string | null => {
+  if (!dateStr) return null;
+  const cleanStr = dateStr.trim();
+  
+  // Intentar formato DD/MM/YYYY o DD-MM-YYYY
+  const ddmmyyyy = cleanStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (ddmmyyyy) {
+    const day = ddmmyyyy[1].padStart(2, '0');
+    const month = ddmmyyyy[2].padStart(2, '0');
+    const year = ddmmyyyy[3];
+    const isoDate = `${year}-${month}-${day}`;
+    
+    // Validar que la fecha sea real
+    const date = new Date(isoDate);
+    if (!isNaN(date.getTime()) && date.getFullYear() == parseInt(year)) {
+      return isoDate;
+    }
+  }
+  
+  // Intentar formato ISO (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+    const date = new Date(cleanStr);
+    if (!isNaN(date.getTime())) {
+      return cleanStr;
+    }
+  }
+  
+  return null;
+};
+
 export const clienteRoutes = (pool: Pool) => {
-  // ✅ Plantilla Excel con validaciones compatibles
+  // ✅ Plantilla Excel con validaciones
   router.get('/api/cliente/plantilla-excel', async (req, res) => {
     try {
       const workbook = new ExcelJS.Workbook();
@@ -51,7 +82,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // ✅ Carga masiva con procesamiento correcto de líneas
+  // ✅ Carga masiva con manejo robusto de fechas
   router.post('/api/carga-directa', async (req: Request, res: Response) => {
     const { csvContent } = req.body;
     if (!csvContent) {
@@ -59,14 +90,12 @@ export const clienteRoutes = (pool: Pool) => {
     }
 
     try {
-      // ✅ Procesamiento correcto: eliminar encabezado y comentarios
       let lines = csvContent
         .split('\n')
         .map((line: string) => line.trim())
         .filter((line: string) => line !== '' && !line.startsWith('#'));
 
-      // ✅ Eliminar encabezado si existe
-      if (lines.length > 0 && lines[0].includes('Nombre del Cliente *')) {
+      if (lines.length > 0 && (lines[0].includes('Nombre del Cliente *') || lines[0].includes('nombre_entidad'))) {
         lines = lines.slice(1);
       }
 
@@ -86,61 +115,59 @@ export const clienteRoutes = (pool: Pool) => {
         }
       }
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        let successCount = 0;
+      let successCount = 0;
 
-        for (let i = 0; i < lines.length; i++) {
-          try {
-            const values = lines[i].split(',').map((s: string) => {
-              const trimmed = s.trim();
-              return trimmed.startsWith('"') && trimmed.endsWith('"')
-                ? trimmed.slice(1, -1)
-                : trimmed;
-            });
+      for (let i = 0; i < lines.length; i++) {
+        const client = await pool.connect();
+        try {
+          const values = lines[i].split(',').map((s: string) => {
+            const trimmed = s.trim();
+            return trimmed.startsWith('"') && trimmed.endsWith('"')
+              ? trimmed.slice(1, -1)
+              : trimmed;
+          });
 
-            if (values.length < 3) continue;
+          if (values.length < 3) continue;
 
-            const nombre_entidad = values[0];
-            const tipo_cliente = values[1];
-            const actividad_economica = values[2];
-            const estado_bien = values[3] || null;
-            const alias = values[4] || null;
-            const fecha_nacimiento_constitucion = values[5] || null;
-            const nacionalidad = values[6] || null;
-            const domicilio_mexico = values[7] || null;
-            const ocupacion = values[8] || null;
+          const nombre_entidad = values[0];
+          const tipo_cliente = values[1];
+          const actividad_economica = values[2];
+          const estado_bien = values[3] || null;
+          const alias = values[4] || null;
+          const fecha_nacimiento_constitucion = parseDate(values[5]) || null;
+          const nacionalidad = values[6] || null;
+          const domicilio_mexico = values[7] || null;
+          const ocupacion = values[8] || null;
 
-            if (nombre_entidad && tipo_cliente && actividad_economica && ['persona_fisica', 'persona_moral'].includes(tipo_cliente)) {
-              await client.query(
-                `INSERT INTO clientes (empresa_id, nombre_entidad, tipo_cliente, actividad_economica, estado, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion)
-                 VALUES ($1, $2, $3, $4, 'activo', $5, $6, $7, $8, $9)`,
-                [
-                  empresaId,
-                  nombre_entidad,
-                  tipo_cliente,
-                  actividad_economica,
-                  alias,
-                  fecha_nacimiento_constitucion,
-                  nacionalidad,
-                  domicilio_mexico,
-                  ocupacion
-                ]
-              );
-              successCount++;
-            }
-          } catch (err) {
-            console.error('Error al procesar línea', i, ':', err);
-            continue;
+          if (nombre_entidad && tipo_cliente && actividad_economica && ['persona_fisica', 'persona_moral'].includes(tipo_cliente)) {
+            await client.query('BEGIN');
+            await client.query(
+              `INSERT INTO clientes (empresa_id, nombre_entidad, tipo_cliente, actividad_economica, estado, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion)
+               VALUES ($1, $2, $3, $4, 'activo', $5, $6, $7, $8, $9)`,
+              [
+                empresaId,
+                nombre_entidad,
+                tipo_cliente,
+                actividad_economica,
+                alias,
+                fecha_nacimiento_constitucion,
+                nacionalidad,
+                domicilio_mexico,
+                ocupacion
+              ]
+            );
+            await client.query('COMMIT');
+            successCount++;
           }
+        } catch (err) {
+          console.error('Error en cliente', i, ':', err.message || err);
+          await client.query('ROLLBACK');
+        } finally {
+          client.release();
         }
-
-        await client.query('COMMIT');
-        res.json({ success: true, message: `✅ ${successCount} cliente(s) cargado(s)` });
-      } finally {
-        client.release();
       }
+
+      res.json({ success: true, message: `✅ ${successCount} cliente(s) cargado(s)` });
     } catch (err) {
       console.error('Error en carga masiva:', err);
       res.status(500).json({ error: 'Error interno del servidor' });

@@ -15,7 +15,7 @@ export default function CargaMasiva() {
 
   const downloadCsvTemplate = () => {
     const csvContent = `nombre_entidad,tipo_cliente,actividad_economica,estado_bien,alias,fecha_nacimiento_constitucion,nacionalidad,domicilio_mexico,ocupacion
-Joyeros de México,persona_moral,venta_de_joyas,Nuevo,,12/05/1990,Mexicana,Ciudad de México,
+Joyeros de México,persona_moral,venta_de_joyas,Nuevo,,15/05/1990,Mexicana,Ciudad de México,
 María López,persona_fisica,servicios_profesionales,Usado,,23/11/1985,Argentina,Monterrey,
 # Reglas:
 # - tipo_cliente: persona_fisica o persona_moral
@@ -54,9 +54,8 @@ María López,persona_fisica,servicios_profesionales,Usado,,23/11/1985,Argentina
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      // ✅ Eliminar encabezado del preview
       let lines = text.split('\n').filter(line => !line.trim().startsWith('#'));
-      if (lines.length > 0 && lines[0].includes('Nombre del Cliente *')) {
+      if (lines.length > 0 && (lines[0].includes('Nombre del Cliente *') || lines[0].includes('nombre_entidad'))) {
         lines = lines.slice(1);
       }
       setCsvContent(lines.join('\n'));
@@ -107,6 +106,7 @@ María López,persona_fisica,servicios_profesionales,Usado,,23/11/1985,Argentina
         <ul>
           <li><strong>Campos obligatorios</strong>: nombre_entidad, tipo_cliente, actividad_economica</li>
           <li><strong>Campos opcionales</strong>: estado_bien, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion</li>
+          <li><strong>Formato de fecha</strong>: DD/MM/AAAA (ej: 15/03/2001)</li>
         </ul>
 
         <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
