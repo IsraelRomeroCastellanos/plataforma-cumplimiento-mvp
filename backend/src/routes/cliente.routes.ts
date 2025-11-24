@@ -52,7 +52,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // ✅ Carga masiva (procesa CSV con más campos)
+  // ✅ Carga masiva con procesamiento robusto de CSV
   router.post('/api/carga-directa', async (req: Request, res: Response) => {
     const { csvContent } = req.body;
     if (!csvContent) {
@@ -60,10 +60,15 @@ export const clienteRoutes = (pool: Pool) => {
     }
 
     try {
+      // ✅ Procesamiento robusto: manejo de comillas y saltos de línea
       const lines = csvContent
         .split('\n')
         .map((line: string) => line.trim())
-        .filter((line: string) => line !== '' && !line.startsWith('#'));
+        .filter((line: string) => line !== '' && !line.startsWith('#'))
+        .map((line: string) => {
+          // Eliminar comillas de Excel al inicio y final
+          return line.replace(/^"(.*)"$/, '$1');
+        });
 
       if (lines.length === 0) {
         return res.status(400).json({ error: 'El archivo no tiene datos válidos' });
@@ -87,36 +92,48 @@ export const clienteRoutes = (pool: Pool) => {
         let successCount = 0;
 
         for (let i = 0; i < lines.length; i++) {
-          const values = lines[i].split(',').map((s: string) => s.trim());
-          if (values.length < 3) continue;
+          try {
+            // ✅ Manejo de comillas en celdas individuales
+            const values = lines[i].split(',').map((s: string) => {
+              const trimmed = s.trim();
+              return trimmed.startsWith('"') && trimmed.endsWith('"')
+                ? trimmed.slice(1, -1)
+                : trimmed;
+            });
 
-          const nombre_entidad = values[0];
-          const tipo_cliente = values[1];
-          const actividad_economica = values[2];
-          const estado_bien = values[3] || null;
-          const alias = values[4] || null;
-          const fecha_nacimiento_constitucion = values[5] || null;
-          const nacionalidad = values[6] || null;
-          const domicilio_mexico = values[7] || null;
-          const ocupacion = values[8] || null;
+            if (values.length < 3) continue;
 
-          if (nombre_entidad && tipo_cliente && actividad_economica && ['persona_fisica', 'persona_moral'].includes(tipo_cliente)) {
-            await client.query(
-              `INSERT INTO clientes (empresa_id, nombre_entidad, tipo_cliente, actividad_economica, estado, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion)
-               VALUES ($1, $2, $3, $4, 'activo', $5, $6, $7, $8, $9)`,
-              [
-                empresaId,
-                nombre_entidad,
-                tipo_cliente,
-                actividad_economica,
-                alias,
-                fecha_nacimiento_constitucion,
-                nacionalidad,
-                domicilio_mexico,
-                ocupacion
-              ]
-            );
-            successCount++;
+            const nombre_entidad = values[0];
+            const tipo_cliente = values[1];
+            const actividad_economica = values[2];
+            const estado_bien = values[3] || null;
+            const alias = values[4] || null;
+            const fecha_nacimiento_constitucion = values[5] || null;
+            const nacionalidad = values[6] || null;
+            const domicilio_mexico = values[7] || null;
+            const ocupacion = values[8] || null;
+
+            if (nombre_entidad && tipo_cliente && actividad_economica && ['persona_fisica', 'persona_moral'].includes(tipo_cliente)) {
+              await client.query(
+                `INSERT INTO clientes (empresa_id, nombre_entidad, tipo_cliente, actividad_economica, estado, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion)
+                 VALUES ($1, $2, $3, $4, 'activo', $5, $6, $7, $8, $9)`,
+                [
+                  empresaId,
+                  nombre_entidad,
+                  tipo_cliente,
+                  actividad_economica,
+                  alias,
+                  fecha_nacimiento_constitucion,
+                  nacionalidad,
+                  domicilio_mexico,
+                  ocupacion
+                ]
+              );
+              successCount++;
+            }
+          } catch (err) {
+            console.error('Error al procesar línea', i, ':', err);
+            continue; // Saltar líneas problemáticas
           }
         }
 

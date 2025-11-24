@@ -13,7 +13,6 @@ export default function CargaMasiva() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // ✅ Plantilla CSV actualizada con más campos
   const downloadCsvTemplate = () => {
     const csvContent = `nombre_entidad,tipo_cliente,actividad_economica,estado_bien,alias,fecha_nacimiento_constitucion,nacionalidad,domicilio_mexico,ocupacion
 Joyeros de México,persona_moral,venta_de_joyas,Nuevo,,12/05/1990,Mexicana,Ciudad de México,
@@ -35,7 +34,6 @@ María López,persona_fisica,servicios_profesionales,Usado,,23/11/1985,Argentina
     document.body.removeChild(link);
   };
 
-  // ✅ Plantilla Excel (descarga directa desde backend)
   const downloadExcelTemplate = () => {
     window.location.href = '/api/cliente/plantilla-excel';
   };
@@ -184,4 +182,4 @@ María López,persona_fisica,servicios_profesionales,Usado,,23/11/1985,Argentina
       </div>
     </div>
   );
-}// Sun Nov 23 19:29:44 CST 2025
+}
