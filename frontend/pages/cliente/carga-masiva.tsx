@@ -13,16 +13,16 @@ export default function CargaMasiva() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // ✅ Genera CSV con UTF-8 + BOM y 5 columnas
-  const downloadTemplate = () => {
-    const csvContent = `nombre_entidad,tipo_cliente,actividad_economica,estado_bien,alias
-Joyeros de México,persona_moral,venta_de_joyas,Nuevo,
-María López,persona_fisica,servicios_profesionales,Usado,
+  // ✅ Plantilla CSV actualizada con más campos
+  const downloadCsvTemplate = () => {
+    const csvContent = `nombre_entidad,tipo_cliente,actividad_economica,estado_bien,alias,fecha_nacimiento_constitucion,nacionalidad,domicilio_mexico,ocupacion
+Joyeros de México,persona_moral,venta_de_joyas,Nuevo,,12/05/1990,Mexicana,Ciudad de México,
+María López,persona_fisica,servicios_profesionales,Usado,,23/11/1985,Argentina,Monterrey,
 # Reglas:
 # - tipo_cliente: persona_fisica o persona_moral
 # - estado_bien: Nuevo, Usado, Viejo
+# - fecha_nacimiento_constitucion: formato DD/MM/AAAA
 `;
-    // ✅ BOM UTF-8 para evitar caracteres corruptos
     const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
     const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -33,6 +33,11 @@ María López,persona_fisica,servicios_profesionales,Usado,
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // ✅ Plantilla Excel (descarga directa desde backend)
+  const downloadExcelTemplate = () => {
+    window.location.href = '/api/cliente/plantilla-excel';
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +56,6 @@ María López,persona_fisica,servicios_profesionales,Usado,
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      // Eliminar líneas de instrucciones (#)
       const cleanText = text.split('\n').filter(line => !line.trim().startsWith('#')).join('\n');
       setCsvContent(cleanText);
       const lines = cleanText.split('\n').slice(0, 5);
@@ -101,13 +105,13 @@ María López,persona_fisica,servicios_profesionales,Usado,
         <p>Sube un archivo CSV con la siguiente estructura:</p>
         <ul>
           <li><strong>Campos obligatorios</strong>: nombre_entidad, tipo_cliente, actividad_economica</li>
-          <li><strong>Campos opcionales</strong>: estado_bien, alias</li>
+          <li><strong>Campos opcionales</strong>: estado_bien, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion</li>
         </ul>
 
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
           <button
             type="button"
-            onClick={downloadTemplate}
+            onClick={downloadCsvTemplate}
             style={{
               padding: '10px 16px',
               backgroundColor: '#3b82f6',
@@ -118,7 +122,22 @@ María López,persona_fisica,servicios_profesionales,Usado,
               fontSize: '14px'
             }}
           >
-            📥 Descargar Plantilla CSV de Ejemplo
+            📥 Plantilla CSV
+          </button>
+          <button
+            type="button"
+            onClick={downloadExcelTemplate}
+            style={{
+              padding: '10px 16px',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            📊 Plantilla Excel (.xlsx)
           </button>
         </div>
 
