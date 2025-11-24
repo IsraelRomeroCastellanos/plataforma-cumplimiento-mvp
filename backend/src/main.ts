@@ -38,7 +38,7 @@ const pool = new Pool({
 
 // ✅ Registro de rutas CORRECTO
 app.use(authRoutes(pool));
-app.use(clienteRoutes(pool)); // ← Devuelve un Router
+app.use(clienteRoutes(pool)); // ← Devuelve un Router válido
 app.use(adminRoutes(pool));
 
 app.get('/api/health', (req, res) => {
