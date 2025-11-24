@@ -7,12 +7,10 @@ import { JWT_SECRET } from '../services/auth.service';
 
 const router = Router();
 
-// ✅ Función para parsear fechas en formato DD/MM/YYYY
 const parseDate = (dateStr: string): string | null => {
   if (!dateStr) return null;
   const cleanStr = dateStr.trim();
   
-  // Intentar formato DD/MM/YYYY o DD-MM-YYYY
   const ddmmyyyy = cleanStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (ddmmyyyy) {
     const day = ddmmyyyy[1].padStart(2, '0');
@@ -20,14 +18,12 @@ const parseDate = (dateStr: string): string | null => {
     const year = ddmmyyyy[3];
     const isoDate = `${year}-${month}-${day}`;
     
-    // Validar que la fecha sea real
     const date = new Date(isoDate);
     if (!isNaN(date.getTime()) && date.getFullYear() == parseInt(year)) {
       return isoDate;
     }
   }
   
-  // Intentar formato ISO (YYYY-MM-DD)
   if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
     const date = new Date(cleanStr);
     if (!isNaN(date.getTime())) {
@@ -39,7 +35,6 @@ const parseDate = (dateStr: string): string | null => {
 };
 
 export const clienteRoutes = (pool: Pool) => {
-  // ✅ Plantilla Excel con validaciones
   router.get('/api/cliente/plantilla-excel', async (req, res) => {
     try {
       const workbook = new ExcelJS.Workbook();
@@ -76,13 +71,12 @@ export const clienteRoutes = (pool: Pool) => {
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', 'attachment; filename=plantilla_clientes.xlsx');
       res.send(buf);
-    } catch (err) {
+    } catch (err: any) { // ✅ Corrección aquí
       console.error('Error Excel:', err);
       res.status(500).json({ error: 'Error al generar Excel' });
     }
   });
 
-  // ✅ Carga masiva con manejo robusto de fechas
   router.post('/api/carga-directa', async (req: Request, res: Response) => {
     const { csvContent } = req.body;
     if (!csvContent) {
@@ -110,7 +104,7 @@ export const clienteRoutes = (pool: Pool) => {
         try {
           const payload = jwt.verify(token, JWT_SECRET) as any;
           empresaId = payload.empresaId || 1;
-        } catch (err) {
+        } catch (err: any) { // ✅ Corrección aquí
           console.warn('Token inválido en carga masiva');
         }
       }
@@ -159,7 +153,7 @@ export const clienteRoutes = (pool: Pool) => {
             await client.query('COMMIT');
             successCount++;
           }
-        } catch (err) {
+        } catch (err: any) { // ✅ Corrección aquí
           console.error('Error en cliente', i, ':', err.message || err);
           await client.query('ROLLBACK');
         } finally {
@@ -168,13 +162,12 @@ export const clienteRoutes = (pool: Pool) => {
       }
 
       res.json({ success: true, message: `✅ ${successCount} cliente(s) cargado(s)` });
-    } catch (err) {
+    } catch (err: any) { // ✅ Corrección aquí
       console.error('Error en carga masiva:', err);
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   });
 
-  // ✅ Listar clientes para todos los roles
   router.get('/api/cliente/mis-clientes', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -185,7 +178,7 @@ export const clienteRoutes = (pool: Pool) => {
     let payload;
     try {
       payload = jwt.verify(token, JWT_SECRET) as any;
-    } catch (err) {
+    } catch (err: any) { // ✅ Corrección aquí
       return res.status(401).json({ error: 'Token inválido' });
     }
 
@@ -207,13 +200,12 @@ export const clienteRoutes = (pool: Pool) => {
         clientes = result.rows;
       }
       res.json({ clientes });
-    } catch (err) {
+    } catch (err: any) { // ✅ Corrección aquí
       console.error('Error al listar clientes:', err);
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   });
 
-  // ✅ Actualizar estado de cliente
   router.put('/api/cliente/:id/estado', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { estado } = req.body;
@@ -231,7 +223,7 @@ export const clienteRoutes = (pool: Pool) => {
     let payload;
     try {
       payload = jwt.verify(token, JWT_SECRET) as any;
-    } catch (err) {
+    } catch (err: any) { // ✅ Corrección aquí
       return res.status(401).json({ error: 'Token inválido' });
     }
 
@@ -252,12 +244,11 @@ export const clienteRoutes = (pool: Pool) => {
         [estado, id]
       );
       res.json({ success: true, message: 'Estado actualizado' });
-    } catch (err) {
+    } catch (err: any) { // ✅ Corrección aquí
       console.error('Error al actualizar estado:', err);
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   });
 
-  // ✅ ¡DEVUELVE EL ROUTER!
   return router;
 };
