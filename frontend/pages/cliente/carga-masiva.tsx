@@ -54,10 +54,13 @@ María López,persona_fisica,servicios_profesionales,Usado,,23/11/1985,Argentina
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const cleanText = text.split('\n').filter(line => !line.trim().startsWith('#')).join('\n');
-      setCsvContent(cleanText);
-      const lines = cleanText.split('\n').slice(0, 5);
-      setPreview(lines);
+      // ✅ Eliminar encabezado del preview
+      let lines = text.split('\n').filter(line => !line.trim().startsWith('#'));
+      if (lines.length > 0 && lines[0].includes('Nombre del Cliente *')) {
+        lines = lines.slice(1);
+      }
+      setCsvContent(lines.join('\n'));
+      setPreview(lines.slice(0, 5));
     };
     reader.readAsText(selectedFile, 'utf-8');
   };

@@ -26,7 +26,6 @@ export const clienteRoutes = (pool: Pool) => {
         { header: 'Ocupación', key: 'ocupacion', width: 25 }
       ];
 
-      // ✅ Validaciones compatibles con exceljs@4.3.0
       for (let row = 2; row <= 1000; row++) {
         worksheet.getCell(`B${row}`).dataValidation = {
           type: 'list',
@@ -52,7 +51,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // ✅ Carga masiva con procesamiento robusto de CSV
+  // ✅ Carga masiva con procesamiento correcto de líneas
   router.post('/api/carga-directa', async (req: Request, res: Response) => {
     const { csvContent } = req.body;
     if (!csvContent) {
@@ -60,15 +59,16 @@ export const clienteRoutes = (pool: Pool) => {
     }
 
     try {
-      // ✅ Procesamiento robusto: manejo de comillas y saltos de línea
-      const lines = csvContent
+      // ✅ Procesamiento correcto: eliminar encabezado y comentarios
+      let lines = csvContent
         .split('\n')
         .map((line: string) => line.trim())
-        .filter((line: string) => line !== '' && !line.startsWith('#'))
-        .map((line: string) => {
-          // Eliminar comillas de Excel al inicio y final
-          return line.replace(/^"(.*)"$/, '$1');
-        });
+        .filter((line: string) => line !== '' && !line.startsWith('#'));
+
+      // ✅ Eliminar encabezado si existe
+      if (lines.length > 0 && lines[0].includes('Nombre del Cliente *')) {
+        lines = lines.slice(1);
+      }
 
       if (lines.length === 0) {
         return res.status(400).json({ error: 'El archivo no tiene datos válidos' });
@@ -93,7 +93,6 @@ export const clienteRoutes = (pool: Pool) => {
 
         for (let i = 0; i < lines.length; i++) {
           try {
-            // ✅ Manejo de comillas en celdas individuales
             const values = lines[i].split(',').map((s: string) => {
               const trimmed = s.trim();
               return trimmed.startsWith('"') && trimmed.endsWith('"')
@@ -133,7 +132,7 @@ export const clienteRoutes = (pool: Pool) => {
             }
           } catch (err) {
             console.error('Error al procesar línea', i, ':', err);
-            continue; // Saltar líneas problemáticas
+            continue;
           }
         }
 
