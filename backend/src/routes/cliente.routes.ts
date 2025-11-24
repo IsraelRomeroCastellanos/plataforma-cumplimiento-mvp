@@ -2,13 +2,13 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
-import * as ExcelJS from 'exceljs';
+import ExcelJS from 'exceljs';
 import { JWT_SECRET } from '../services/auth.service';
 
 const router = Router();
 
 export const clienteRoutes = (pool: Pool) => {
-  // ✅ Endpoint para plantilla Excel
+  // ✅ Plantilla Excel con listas desplegables
   router.get('/api/cliente/plantilla-excel', async (req, res) => {
     try {
       const workbook = new ExcelJS.Workbook();
@@ -26,18 +26,26 @@ export const clienteRoutes = (pool: Pool) => {
         { header: 'Ocupación', key: 'ocupacion', width: 25 }
       ];
 
-      // Validaciones para listas desplegables
-      worksheet.getColumn('B').dataValidation = {
-        type: 'list',
-        allowBlank: true,
-        formulae: ['persona_fisica,persona_moral']
-      };
+      // ✅ Validaciones para listas desplegables (sintaxis correcta)
+      worksheet.getColumn('B').eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+        if (rowNumber > 1) {
+          cell.dataValidation = {
+            type: 'list',
+            allowBlank: true,
+            formulae: ['"persona_fisica,persona_moral"']
+          };
+        }
+      });
 
-      worksheet.getColumn('D').dataValidation = {
-        type: 'list',
-        allowBlank: true,
-        formulae: ['Nuevo,Usado,Viejo']
-      };
+      worksheet.getColumn('D').eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+        if (rowNumber > 1) {
+          cell.dataValidation = {
+            type: 'list',
+            allowBlank: true,
+            formulae: ['"Nuevo,Usado,Viejo"']
+          };
+        }
+      });
 
       worksheet.getRow(1).font = { bold: true };
 
@@ -130,5 +138,90 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // ... resto del código (mis-clientes, actualizar estado, etc.) ...
+  // ✅ Listar clientes para todos los roles
+  router.get('/api/cliente/mis-clientes', async (req: Request, res: Response) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let payload;
+    try {
+      payload = jwt.verify(token, JWT_SECRET) as any;
+    } catch (err) {
+      return res.status(401).json({ error: 'Token inválido' });
+    }
+
+    try {
+      let clientes;
+      if (payload.role === 'cliente' && payload.empresaId) {
+        const result = await pool.query(
+          'SELECT id, nombre_entidad, tipo_cliente, actividad_economica, estado FROM clientes WHERE empresa_id = $1 ORDER BY nombre_entidad',
+          [payload.empresaId]
+        );
+        clientes = result.rows;
+      } else {
+        const result = await pool.query(
+          `SELECT c.id, c.nombre_entidad, c.tipo_cliente, c.actividad_economica, c.estado, e.nombre_legal as empresa 
+           FROM clientes c 
+           JOIN empresas e ON c.empresa_id = e.id 
+           ORDER BY e.nombre_legal, c.nombre_entidad`
+        );
+        clientes = result.rows;
+      }
+      res.json({ clientes });
+    } catch (err) {
+      console.error('Error al listar clientes:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // ✅ Actualizar estado de cliente
+  router.put('/api/cliente/:id/estado', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { estado } = req.body;
+    
+    if (!estado || !['activo', 'inactivo'].includes(estado)) {
+      return res.status(400).json({ error: 'Estado no válido' });
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let payload;
+    try {
+      payload = jwt.verify(token, JWT_SECRET) as any;
+    } catch (err) {
+      return res.status(401).json({ error: 'Token inválido' });
+    }
+
+    try {
+      let empresaId;
+      if (payload.role === 'cliente') {
+        empresaId = payload.empresaId;
+      } else {
+        const check = await pool.query('SELECT empresa_id FROM clientes WHERE id = $1', [id]);
+        if (check.rows.length === 0) {
+          return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+        empresaId = check.rows[0].empresa_id;
+      }
+
+      await pool.query(
+        'UPDATE clientes SET estado = $1, actualizado_en = NOW() WHERE id = $2',
+        [estado, id]
+      );
+      res.json({ success: true, message: 'Estado actualizado' });
+    } catch (err) {
+      console.error('Error al actualizar estado:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // ✅ ¡DEVUELVE EL ROUTER!
+  return router;
 };
