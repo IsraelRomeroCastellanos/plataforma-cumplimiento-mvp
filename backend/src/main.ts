@@ -13,19 +13,11 @@ const app = express();
 const port = process.env.PORT || 10000;
 
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:8080',
-    'https://plataforma-cumplimiento-mvp-qj4w.vercel.app'
-  ],
+  origin: ['http://localhost:3000', 'https://plataforma-cumplimiento-mvp-qj4w.vercel.app'],
   credentials: true
 }));
 
-app.use(fileUpload({
-  useTempFiles: true,
-  tempFileDir: '/tmp/'
-}));
-
+app.use(fileUpload({ useTempFiles: true, tempFileDir: '/tmp/' }));
 app.use(express.json());
 
 const pool = new Pool({
@@ -33,6 +25,7 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
+// ✅ Registro CORRECTO de todas las rutas
 app.use(authRoutes(pool));
 app.use(clienteRoutes(pool));
 app.use(adminRoutes(pool));
