@@ -36,9 +36,9 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// ✅ Registro de rutas CORRECTO
+// ✅ Registro CORRECTO de rutas
 app.use(authRoutes(pool));
-app.use(clienteRoutes(pool)); // ← Devuelve un Router válido
+app.use(clienteRoutes(pool));
 app.use(adminRoutes(pool));
 
 app.get('/api/health', (req, res) => {
