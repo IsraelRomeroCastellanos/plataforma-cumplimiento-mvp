@@ -1,3 +1,4 @@
+// backend/src/main.ts
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -25,7 +26,7 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// ✅ Registro CORRECTO de todas las rutas
+// ✅ Registro CORRECTO
 app.use(authRoutes(pool));
 app.use(clienteRoutes(pool));
 app.use(adminRoutes(pool));

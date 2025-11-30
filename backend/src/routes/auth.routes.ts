@@ -1,10 +1,11 @@
+// backend/src/routes/auth.routes.ts
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev';
 
 export const authRoutes = (pool: Pool) => {
   router.post('/api/login', async (req: Request, res: Response) => {
