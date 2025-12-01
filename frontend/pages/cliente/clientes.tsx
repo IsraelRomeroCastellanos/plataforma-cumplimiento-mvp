@@ -42,7 +42,7 @@ export default function GestionClientes() {
   }, [router]);
 
   const handleToggleEstado = async (id: number, estadoActual: string) => {
-    if (userRole !== 'admin') return; // Solo admin puede cambiar estado
+    if (userRole !== 'admin') return;
 
     const nuevoEstado = estadoActual === 'activo' ? 'inactivo' : 'activo';
     const token = localStorage.getItem('token');
@@ -106,7 +106,7 @@ export default function GestionClientes() {
 
         {clientes.length === 0 ? (
           <p>No se encontraron clientes.</p>
-        ) else (
+        ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ccc' }}>
             <thead>
               <tr>

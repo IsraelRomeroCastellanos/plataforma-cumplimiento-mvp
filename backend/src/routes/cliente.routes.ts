@@ -5,7 +5,6 @@ import { Pool } from 'pg';
 const router = Router();
 
 export const clienteRoutes = (pool: Pool) => {
-  // ✅ Registro manual para TODOS los roles
   router.post('/api/cliente/registrar', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -36,13 +35,11 @@ export const clienteRoutes = (pool: Pool) => {
 
     let empresaId;
     if (payload.role === 'cliente') {
-      // ✅ Cliente: usa su propia empresa (debe estar en el token)
       if (!payload.empresaId) {
         return res.status(400).json({ error: 'El usuario cliente debe tener una empresa asignada' });
       }
       empresaId = payload.empresaId;
     } else {
-      // ✅ Admin/Consultor: requiere empresa_id explícito
       if (!req.body.empresa_id) {
         return res.status(400).json({ error: 'Se requiere empresa_id para admin/consultor' });
       }
@@ -76,7 +73,6 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // ✅ Listar clientes para todos los roles
   router.get('/api/cliente/mis-clientes', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -112,7 +108,6 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // ✅ Actualizar estado de cliente (solo admin)
   router.put('/api/cliente/:id/estado', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { estado } = req.body;
@@ -135,7 +130,6 @@ export const clienteRoutes = (pool: Pool) => {
       return res.status(401).json({ error: 'Token inválido' });
     }
 
-    // ✅ Solo admin puede cambiar estado
     if (payload.role !== 'admin') {
       return res.status(403).json({ error: 'Solo el administrador puede cambiar el estado' });
     }
@@ -152,7 +146,6 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
-  // ✅ Carga masiva (todos los roles)
   router.post('/api/carga-directa', async (req: Request, res: Response) => {
     const { csvContent } = req.body;
     if (!csvContent) {

@@ -100,7 +100,7 @@ export default function RegistrarCliente() {
                 onChange={handleChange}
                 required
                 type="number"
-                style={{ width: '100%", padding: '0.5rem' }}
+                style={{ width: '100%', padding: '0.5rem' }}
               /></label>
             </div>
           )}
