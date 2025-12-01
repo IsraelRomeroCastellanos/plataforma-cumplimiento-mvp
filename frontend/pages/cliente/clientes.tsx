@@ -5,42 +5,14 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 
 export default function GestionClientes() {
-  const [clientes, setClientes] = useState([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
-    nombre_entidad: '',
-    tipo_cliente: 'persona_fisica',
-    actividad_economica: '',
-    alias: '',
-    fecha_nacimiento_constitucion: '',
-    nacionalidad: '',
-    domicilio_mexico: '',
-    ocupacion: '',
-    empresa_id: ''
-  });
-
+  const [clientes, setClientes] = useState<any[]>([]);
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [userEmpresaId, setUserEmpresaId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userRaw = localStorage.getItem('user');
-      if (userRaw) {
-        const user = JSON.parse(userRaw);
-        setUserRole(user.role);
-        setUserEmpresaId(user.empresaId || null);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const token = localStorage.getItem('token');
-    const userRaw = localStorage.getItem('user');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const userRaw = typeof window !== 'undefined' ? localStorage.getItem('user') : '{}';
     const user = userRaw ? JSON.parse(userRaw) : {};
 
     if (!token || !['admin', 'consultor', 'cliente'].includes(user.role)) {
@@ -50,76 +22,116 @@ export default function GestionClientes() {
 
     const fetchClientes = async () => {
       try {
+        setError('');
         const res = await axios.get('/api/cliente/mis-clientes', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setClientes(res.data.clientes);
+        setClientes(res.data.clientes || []);
       } catch (err: any) {
+        console.error('Error al cargar clientes:', err);
         setError(err.response?.data?.error || 'Error al cargar clientes');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchClientes();
   }, [router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  if (loading) {
+    return (
+      <div>
+        <Navbar />
+        <div style={{ padding: '2rem' }}>Cargando...</div>
+      </div>
+    );
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (typeof window === 'undefined') return;
-    
-    const token = localStorage.getItem('token');
-    const userRaw = localStorage.getItem('user');
-    const user = userRaw ? JSON.parse(userRaw) : {};
+  return (
+    <div>
+      <Navbar />
+      <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h1>Mis Clientes</h1>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={() => router.push('/cliente/registrar')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Registrar Cliente
+            </button>
+            <button
+              onClick={() => router.push('/cliente/carga-masiva')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Carga Masiva
+            </button>
+          </div>
+        </div>
 
-    let empresaId;
-    if (user.role === 'cliente') {
-      if (!user.empresaId) {
-        setError('Tu usuario no tiene una empresa asignada');
-        return;
-      }
-      empresaId = user.empresaId;
-    } else {
-      if (!formData.empresa_id) {
-        setError('Selecciona una empresa');
-        return;
-      }
-      empresaId = formData.empresa_id;
-    }
+        {error && <p style={{ color: 'red', marginBottom: '1rem' }}>{error}</p>}
 
-    setLoading(true);
-    setError('');
-
-    try {
-      await axios.post('/api/cliente/registrar', { ...formData, empresa_id: empresaId }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      const res = await axios.get('/api/cliente/mis-clientes', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setClientes(res.data.clientes);
-      setShowModal(false);
-      setFormData({
-        nombre_entidad: '',
-        tipo_cliente: 'persona_fisica',
-        actividad_economica: '',
-        alias: '',
-        fecha_nacimiento_constitucion: '',
-        nacionalidad: '',
-        domicilio_mexico: '',
-        ocupacion: '',
-        empresa_id: ''
-      });
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al registrar cliente');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ... resto del componente (handleCreate, handleToggleEstado, etc.) ...
-};
+        {clientes.length === 0 ? (
+          <p>No se encontraron clientes.</p>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ccc' }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>ID</th>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Nombre</th>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Tipo</th>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Actividad</th>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Estado</th>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clientes.map((cliente) => (
+                <tr key={cliente.id}>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{cliente.id}</td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{cliente.nombre_entidad}</td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{cliente.tipo_cliente}</td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{cliente.actividad_economica}</td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+                    {cliente.estado === 'activo' ? '✅' : '❌'}
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+                    <button
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: cliente.estado === 'activo' ? '#ef4444' : '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        // Lógica para activar/desactivar
+                      }}
+                    >
+                      {cliente.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
