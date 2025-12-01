@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 const router = Router();
 
 export const clienteRoutes = (pool: Pool) => {
-  // ✅ Registro manual SOLO para admin
+  // ✅ Registro manual para TODOS los roles
   router.post('/api/cliente/registrar', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -20,19 +20,13 @@ export const clienteRoutes = (pool: Pool) => {
       return res.status(401).json({ error: 'Token inválido' });
     }
 
-    // ✅ Solo admin puede registrar clientes manualmente
-    if (payload.role !== 'admin') {
-      return res.status(403).json({ error: 'Solo el administrador puede registrar clientes manualmente' });
-    }
-
     const {
       nombre_entidad,
       tipo_cliente,
-      actividad_economica,
-      empresa_id
+      actividad_economica
     } = req.body;
 
-    if (!nombre_entidad || !tipo_cliente || !actividad_economica || !empresa_id) {
+    if (!nombre_entidad || !tipo_cliente || !actividad_economica) {
       return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
 
@@ -40,11 +34,26 @@ export const clienteRoutes = (pool: Pool) => {
       return res.status(400).json({ error: 'Tipo de cliente no válido' });
     }
 
+    let empresaId;
+    if (payload.role === 'cliente') {
+      // ✅ Cliente: usa su propia empresa (debe estar en el token)
+      if (!payload.empresaId) {
+        return res.status(400).json({ error: 'El usuario cliente debe tener una empresa asignada' });
+      }
+      empresaId = payload.empresaId;
+    } else {
+      // ✅ Admin/Consultor: requiere empresa_id explícito
+      if (!req.body.empresa_id) {
+        return res.status(400).json({ error: 'Se requiere empresa_id para admin/consultor' });
+      }
+      empresaId = req.body.empresa_id;
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      const empCheck = await client.query('SELECT id FROM empresas WHERE id = $1 AND estado = $2', [empresa_id, 'activo']);
+      const empCheck = await client.query('SELECT id FROM empresas WHERE id = $1 AND estado = $2', [empresaId, 'activo']);
       if (empCheck.rows.length === 0) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'La empresa especificada no existe o está inactiva' });
@@ -53,7 +62,7 @@ export const clienteRoutes = (pool: Pool) => {
       const result = await client.query(
         `INSERT INTO clientes (empresa_id, nombre_entidad, tipo_cliente, actividad_economica, estado)
          VALUES ($1, $2, $3, $4, 'activo') RETURNING id`,
-        [empresa_id, nombre_entidad, tipo_cliente, actividad_economica]
+        [empresaId, nombre_entidad, tipo_cliente, actividad_economica]
       );
 
       await client.query('COMMIT');

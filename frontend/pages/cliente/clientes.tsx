@@ -72,7 +72,7 @@ export default function GestionClientes() {
       <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h1>Mis Clientes</h1>
-          {userRole === 'admin' && (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
               onClick={() => router.push('/cliente/registrar')}
               style={{
@@ -86,27 +86,27 @@ export default function GestionClientes() {
             >
               Registrar Cliente
             </button>
-          )}
-          <button
-            onClick={() => router.push('/cliente/carga-masiva')}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Carga Masiva
-          </button>
+            <button
+              onClick={() => router.push('/cliente/carga-masiva')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Carga Masiva
+            </button>
+          </div>
         </div>
 
         {error && <p style={{ color: 'red', marginBottom: '1rem' }}>{error}</p>}
 
         {clientes.length === 0 ? (
           <p>No se encontraron clientes.</p>
-        ) : (
+        ) else (
           <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ccc' }}>
             <thead>
               <tr>

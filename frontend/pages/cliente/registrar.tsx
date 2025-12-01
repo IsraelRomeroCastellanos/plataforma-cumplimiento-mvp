@@ -1,5 +1,5 @@
 // frontend/pages/cliente/registrar.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
@@ -13,7 +13,21 @@ export default function RegistrarCliente() {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userEmpresaId, setUserEmpresaId] = useState<number | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const userRaw = localStorage.getItem('user');
+    if (userRaw) {
+      const user = JSON.parse(userRaw);
+      setUserRole(user.role);
+      if (user.role === 'cliente' && user.empresaId) {
+        setUserEmpresaId(user.empresaId);
+        setFormData(prev => ({ ...prev, empresa_id: user.empresaId.toString() }));
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,16 +92,18 @@ export default function RegistrarCliente() {
               style={{ width: '100%', padding: '0.5rem' }}
             /></label>
           </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label>ID de Empresa: <input
-              name="empresa_id"
-              value={formData.empresa_id}
-              onChange={handleChange}
-              required
-              type="number"
-              style={{ width: '100%', padding: '0.5rem' }}
-            /></label>
-          </div>
+          {userRole !== 'cliente' && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label>ID de Empresa: <input
+                name="empresa_id"
+                value={formData.empresa_id}
+                onChange={handleChange}
+                required
+                type="number"
+                style={{ width: '100%", padding: '0.5rem' }}
+              /></label>
+            </div>
+          )}
           <button
             type="submit"
             style={{
