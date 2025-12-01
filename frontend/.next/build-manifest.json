@@ -5,8 +5,8 @@
   "devFiles": [],
   "ampDevFiles": [],
   "lowPriorityFiles": [
-    "static/4p1HS-M1cpuvpxWslOfvQ/_buildManifest.js",
-    "static/4p1HS-M1cpuvpxWslOfvQ/_ssgManifest.js"
+    "static/MpVhBUVlTdZpoSfemFRwf/_buildManifest.js",
+    "static/MpVhBUVlTdZpoSfemFRwf/_ssgManifest.js"
   ],
   "rootMainFiles": [],
   "pages": {
@@ -67,7 +67,7 @@
       "static/chunks/framework-2c16ac744b6cdea6.js",
       "static/chunks/main-2340e7dd7876a540.js",
       "static/chunks/66-d6d08e1905cf8487.js",
-      "static/chunks/pages/cliente/carga-masiva-f112475a2ea6fa2e.js"
+      "static/chunks/pages/cliente/carga-masiva-e813a2d504228e4e.js"
     ],
     "/cliente/clientes": [
       "static/chunks/webpack-ee7e63bc15b31913.js",

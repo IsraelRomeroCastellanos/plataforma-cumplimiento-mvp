@@ -1,10 +1,53 @@
 // backend/src/routes/cliente.routes.ts
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
+import ExcelJS from 'exceljs';
 
 const router = Router();
 
 export const clienteRoutes = (pool: Pool) => {
+  router.get('/api/cliente/plantilla-excel', async (req: Request, res: Response) => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Clientes');
+
+      worksheet.columns = [
+        { header: 'Nombre del Cliente *', key: 'nombre_entidad', width: 30 },
+        { header: 'Tipo de Cliente *', key: 'tipo_cliente', width: 20 },
+        { header: 'Actividad Económica *', key: 'actividad_economica', width: 30 },
+        { header: 'Estado del Bien', key: 'estado_bien', width: 15 },
+        { header: 'Alias', key: 'alias', width: 20 },
+        { header: 'Fecha Nacimiento/Constitución', key: 'fecha_nacimiento', width: 25 },
+        { header: 'Nacionalidad', key: 'nacionalidad', width: 20 },
+        { header: 'Domicilio en México', key: 'domicilio_mexico', width: 30 },
+        { header: 'Ocupación', key: 'ocupacion', width: 25 }
+      ];
+
+      for (let row = 2; row <= 1000; row++) {
+        worksheet.getCell(`B${row}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: ['"persona_fisica,persona_moral"']
+        };
+        worksheet.getCell(`D${row}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: ['"Nuevo,Usado,Viejo"']
+        };
+      }
+
+      worksheet.getRow(1).font = { bold: true };
+
+      const buf = await workbook.xlsx.writeBuffer();
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=plantilla_clientes.xlsx');
+      res.send(buf);
+    } catch (err: any) {
+      console.error('Error al generar Excel:', err);
+      res.status(500).json({ error: 'Error al generar la plantilla Excel' });
+    }
+  });
+
   router.post('/api/cliente/registrar', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

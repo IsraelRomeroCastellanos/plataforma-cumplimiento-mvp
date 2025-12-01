@@ -34,6 +34,10 @@ María López,persona_fisica,servicios_profesionales,Usado,,23/11/1985,Argentina
     document.body.removeChild(link);
   };
 
+  const downloadExcelTemplate = () => {
+    window.location.href = '/api/cliente/plantilla-excel';
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -104,7 +108,7 @@ María López,persona_fisica,servicios_profesionales,Usado,,23/11/1985,Argentina
           <li><strong>Campos opcionales</strong>: estado_bien, alias, fecha_nacimiento_constitucion, nacionalidad, domicilio_mexico, ocupacion</li>
         </ul>
 
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
           <button
             type="button"
             onClick={downloadCsvTemplate}
@@ -119,6 +123,21 @@ María López,persona_fisica,servicios_profesionales,Usado,,23/11/1985,Argentina
             }}
           >
             📥 Plantilla CSV
+          </button>
+          <button
+            type="button"
+            onClick={downloadExcelTemplate}
+            style={{
+              padding: '10px 16px',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            📊 Plantilla Excel (.xlsx)
           </button>
         </div>
 
