@@ -9,6 +9,7 @@ export default function GestionClientes() {
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -19,6 +20,8 @@ export default function GestionClientes() {
       router.push('/login');
       return;
     }
+
+    setUserRole(user.role);
 
     const fetchClientes = async () => {
       try {
@@ -38,6 +41,22 @@ export default function GestionClientes() {
     fetchClientes();
   }, [router]);
 
+  const handleToggleEstado = async (id: number, estadoActual: string) => {
+    if (userRole !== 'admin') return; // Solo admin puede cambiar estado
+
+    const nuevoEstado = estadoActual === 'activo' ? 'inactivo' : 'activo';
+    const token = localStorage.getItem('token');
+
+    try {
+      await axios.put(`/api/cliente/${id}/estado`, { estado: nuevoEstado }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setClientes(prev => prev.map(c => c.id === id ? { ...c, estado: nuevoEstado } : c));
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al actualizar estado');
+    }
+  };
+
   if (loading) {
     return (
       <div>
@@ -53,7 +72,7 @@ export default function GestionClientes() {
       <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h1>Mis Clientes</h1>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {userRole === 'admin' && (
             <button
               onClick={() => router.push('/cliente/registrar')}
               style={{
@@ -67,20 +86,20 @@ export default function GestionClientes() {
             >
               Registrar Cliente
             </button>
-            <button
-              onClick={() => router.push('/cliente/carga-masiva')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Carga Masiva
-            </button>
-          </div>
+          )}
+          <button
+            onClick={() => router.push('/cliente/carga-masiva')}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Carga Masiva
+          </button>
         </div>
 
         {error && <p style={{ color: 'red', marginBottom: '1rem' }}>{error}</p>}
@@ -110,21 +129,21 @@ export default function GestionClientes() {
                     {cliente.estado === 'activo' ? '✅' : '❌'}
                   </td>
                   <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
-                    <button
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: cliente.estado === 'activo' ? '#ef4444' : '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                      onClick={() => {
-                        // Lógica para activar/desactivar
-                      }}
-                    >
-                      {cliente.estado === 'activo' ? 'Desactivar' : 'Activar'}
-                    </button>
+                    {userRole === 'admin' && (
+                      <button
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          backgroundColor: cliente.estado === 'activo' ? '#ef4444' : '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => handleToggleEstado(cliente.id, cliente.estado)}
+                      >
+                        {cliente.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
