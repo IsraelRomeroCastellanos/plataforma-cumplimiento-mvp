@@ -1,24 +1,6 @@
 {
-  "/admin/barridos": "pages/admin/barridos.js",
-  "/admin/editar-usuario": "pages/admin/editar-usuario.js",
-  "/admin/": "pages/admin/.js",
-  "/admin/empresas": "pages/admin/empresas.js",
-  "/admin/matrices": "pages/admin/matrices.js",
-  "/admin/usuarios": "pages/admin/usuarios.js",
-  "/cambiar-contrasena": "pages/cambiar-contrasena.js",
-  "/cliente/carga-masiva": "pages/cliente/carga-masiva.js",
-  "/cliente/clientes": "pages/cliente/clientes.js",
-  "/cliente/registrar": "pages/cliente/registrar.js",
-  "/cliente/reportes": "pages/cliente/reportes.js",
-  "/cliente/transacciones": "pages/cliente/transacciones.js",
-  "/consultor/alertas": "pages/consultor/alertas.js",
-  "/consultor/empresas": "pages/consultor/empresas.js",
-  "/consultor/reportes": "pages/consultor/reportes.js",
-  "/dashboard": "pages/dashboard.js",
-  "/": "pages/index.js",
-  "/login": "pages/login.js",
-  "/registrar-cliente": "pages/registrar-cliente.js",
-  "/_error": "pages/_error.js",
   "/_app": "pages/_app.js",
-  "/_document": "pages/_document.js"
+  "/_error": "pages/_error.js",
+  "/_document": "pages/_document.js",
+  "/": "pages/index.js"
 }
