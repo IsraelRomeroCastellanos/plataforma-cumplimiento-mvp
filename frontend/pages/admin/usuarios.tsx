@@ -8,6 +8,9 @@ export default function GestionUsuarios() {
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [showResetModal, setShowResetModal] = useState<boolean>(false);
+  const [tempPassword, setTempPassword] = useState<string>('');
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -50,10 +53,41 @@ export default function GestionUsuarios() {
     fetchData();
   }, [router]);
 
+  const handleToggleEstado = async (usuario: any) => {
+    if (usuario.email === 'admin@cumplimiento.com') {
+      alert('El usuario raíz no puede desactivarse');
+      return;
+    }
+
+    const nuevoEstado = !usuario.activo;
+    const token = localStorage.getItem('token');
+
+    try {
+      await axios.put(`/api/admin/usuarios/${usuario.id}`, { activo: nuevoEstado }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsuarios(prev => prev.map(u => u.id === usuario.id ? { ...u, activo: nuevoEstado } : u));
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al actualizar estado');
+    }
+  };
+
+  const handleResetPassword = async (usuarioId: number) => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await axios.post(`/api/admin/usuarios/${usuarioId}/reset-password`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTempPassword(res.data.temporalPassword);
+      setShowResetModal(true);
+      setSelectedUserId(usuarioId);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al restablecer contraseña');
+    }
+  };
+
   const handleEdit = (usuario: any) => {
-    // ✅ Redirige a una página de edición (por ahora, solo logea)
-    console.log('Editar usuario:', usuario);
-    alert('Funcionalidad de edición en desarrollo');
+    router.push(`/admin/editar-usuario/${usuario.id}`);
   };
 
   if (loading) {
@@ -97,7 +131,7 @@ export default function GestionUsuarios() {
                   <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
                     {usuario.activo ? '✅' : '❌'}
                   </td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem', display: 'flex', gap: '0.5rem' }}>
                     <button
                       onClick={() => handleEdit(usuario)}
                       style={{
@@ -111,11 +145,74 @@ export default function GestionUsuarios() {
                     >
                       Editar
                     </button>
+                    <button
+                      onClick={() => handleToggleEstado(usuario)}
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: usuario.activo ? '#ef4444' : '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {usuario.activo ? 'Desactivar' : 'Activar'}
+                    </button>
+                    <button
+                      onClick={() => handleResetPassword(usuario.id)}
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#8b5cf6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Restablecer
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        )}
+
+        {showResetModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '8px',
+              textAlign: 'center'
+            }}>
+              <h3>Contraseña temporal generada</h3>
+              <p><strong>{tempPassword}</strong></p>
+              <button
+                onClick={() => setShowResetModal(false)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
