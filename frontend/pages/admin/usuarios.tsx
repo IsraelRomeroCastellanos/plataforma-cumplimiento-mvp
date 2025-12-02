@@ -3,218 +3,183 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import { toast } from 'react-toastify';
 
 export default function GestionUsuarios() {
   const [usuarios, setUsuarios] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
-  const [showResetModal, setShowResetModal] = useState<boolean>(false);
-  const [tempPassword, setTempPassword] = useState<string>('');
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const router = useRouter();
+  const [token, setToken] = useState<string>('');
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const userRaw = localStorage.getItem('user');
-        
-        if (!token || !userRaw) {
-          router.push('/login');
-          return;
-        }
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      setToken(storedToken);
+      fetchUsuarios(storedToken);
+    } else {
+      router.push('/login');
+    }
+  }, []);
 
-        const user = JSON.parse(userRaw);
-        if (user.role !== 'admin') {
-          router.push('/login');
-          return;
-        }
-
-        const response = await axios.get('/api/admin/usuarios', {
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.data && Array.isArray(response.data.usuarios)) {
-          setUsuarios(response.data.usuarios);
-        } else {
-          setError('Formato de respuesta inválido');
-        }
-      } catch (err: any) {
-        console.error('Error detallado:', err);
-        setError(err.response?.data?.error || 'Error al cargar usuarios');
-      } finally {
-        setLoading(false);
+  const fetchUsuarios = async (authToken: string) => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/api/admin/usuarios', {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      
+      if (response.data && Array.isArray(response.data.usuarios)) {
+        setUsuarios(response.data.usuarios);
+      } else {
+        setError('Formato de respuesta inesperado');
       }
-    };
-
-    fetchData();
-  }, [router]);
-
-  const handleToggleEstado = async (usuario: any) => {
-    if (usuario.email === 'admin@cumplimiento.com') {
-      alert('El usuario raíz no puede desactivarse');
-      return;
-    }
-
-    const nuevoEstado = !usuario.activo;
-    const token = localStorage.getItem('token');
-
-    try {
-      await axios.put(`/api/admin/usuarios/${usuario.id}`, { activo: nuevoEstado }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUsuarios(prev => prev.map(u => u.id === usuario.id ? { ...u, activo: nuevoEstado } : u));
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al actualizar estado');
+      console.error('Error completo:', err);
+      setError(err.response?.data?.error || 'Error al cargar usuarios');
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem('token');
+        router.push('/login');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleResetPassword = async (usuarioId: number) => {
-    const token = localStorage.getItem('token');
+  const handleDesactivar = async (id: number) => {
+    if (!window.confirm('¿Estás seguro de que deseas desactivar este usuario?')) return;
+    
     try {
-      const res = await axios.post(`/api/admin/usuarios/${usuarioId}/reset-password`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.put(`/api/admin/usuarios/${id}/desactivar`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      setTempPassword(res.data.temporalPassword);
-      setShowResetModal(true);
-      setSelectedUserId(usuarioId);
+      toast.success('Usuario desactivado correctamente');
+      fetchUsuarios(token);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al restablecer contraseña');
+      console.error('Error al desactivar usuario:', err);
+      toast.error(err.response?.data?.error || 'Error al desactivar usuario');
     }
   };
 
-  const handleEdit = (usuario: any) => {
-    router.push(`/admin/editar-usuario/${usuario.id}`);
+  const handleEditar = (id: number) => {
+    router.push(`/admin/editar-usuario/${id}`);
+  };
+
+  const handleVerDetalle = (id: number) => {
+    router.push(`/admin/usuarios/${id}`);
   };
 
   if (loading) {
     return (
-      <div>
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div style={{ padding: '2rem' }}>Cargando usuarios...</div>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg text-gray-600">Cargando usuarios...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-        <h1>Gestión de Usuarios</h1>
-        {error && <p style={{ color: 'red', marginBottom: '1rem' }}>{error}</p>}
-        {usuarios.length === 0 ? (
-          <p>No se encontraron usuarios.</p>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ccc' }}>
-            <thead>
-              <tr>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>ID</th>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Email</th>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Nombre</th>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Rol</th>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Empresa</th>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Activo</th>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios.map((usuario) => (
-                <tr key={usuario.id}>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{usuario.id}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{usuario.email}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{usuario.nombre_completo}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{usuario.rol}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{usuario.empresa_id || '-'}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
-                    {usuario.activo ? '✅' : '❌'}
-                  </td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem', display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={() => handleEdit(usuario)}
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleToggleEstado(usuario)}
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: usuario.activo ? '#ef4444' : '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {usuario.activo ? 'Desactivar' : 'Activar'}
-                    </button>
-                    <button
-                      onClick={() => handleResetPassword(usuario.id)}
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#8b5cf6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Restablecer
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-
-        {showResetModal && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-            <div style={{
-              backgroundColor: 'white',
-              padding: '2rem',
-              borderRadius: '8px',
-              textAlign: 'center'
-            }}>
-              <h3>Contraseña temporal generada</h3>
-              <p><strong>{tempPassword}</strong></p>
-              <button
-                onClick={() => setShowResetModal(false)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Cerrar
-              </button>
-            </div>
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
+            <button
+              onClick={() => router.push('/admin/crear-usuario')}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Crear Usuario
+            </button>
           </div>
-        )}
-      </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md">
+              {error}
+            </div>
+          )}
+
+          <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+            <table className="min-w-full divide-y divide-gray-300">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Nombre</th>
+                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Email</th>
+                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Rol</th>
+                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Empresa</th>
+                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Estado</th>
+                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {usuarios.map((usuario) => (
+                  <tr key={usuario.id} className="hover:bg-gray-50">
+                    <td className="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                      {usuario.nombre_completo}
+                    </td>
+                    <td className="px-3 py-4 text-sm text-gray-500">{usuario.email}</td>
+                    <td className="px-3 py-4 text-sm text-gray-500">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        usuario.rol === 'admin' ? 'bg-green-100 text-green-800' :
+                        usuario.rol === 'consultor' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {usuario.rol}
+                      </span>
+                    </td>
+                    <td className="px-3 py-4 text-sm text-gray-500">
+                      {usuario.empresa_id ? `Empresa ${usuario.empresa_id}` : 'N/A'}
+                    </td>
+                    <td className="px-3 py-4 text-sm text-gray-500">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        usuario.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {usuario.activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-4 text-sm text-gray-500">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleVerDetalle(usuario.id)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          Ver
+                        </button>
+                        <button
+                          onClick={() => handleEditar(usuario.id)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          Editar
+                        </button>
+                        {usuario.activo && (
+                          <button
+                            onClick={() => handleDesactivar(usuario.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Desactivar
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {usuarios.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No se encontraron usuarios
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

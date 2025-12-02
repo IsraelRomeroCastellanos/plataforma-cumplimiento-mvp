@@ -1,1 +1,24 @@
-{"/admin/barridos":"pages/admin/barridos.html","/admin/empresas":"pages/admin/empresas.html","/admin/matrices":"pages/admin/matrices.html","/admin/usuarios":"pages/admin/usuarios.html","/cambiar-contrasena":"pages/cambiar-contrasena.html","/cliente/carga-masiva":"pages/cliente/carga-masiva.html","/cliente/clientes":"pages/cliente/clientes.html","/cliente/registrar":"pages/cliente/registrar.html","/cliente/reportes":"pages/cliente/reportes.html","/cliente/transacciones":"pages/cliente/transacciones.html","/consultor/alertas":"pages/consultor/alertas.html","/consultor/empresas":"pages/consultor/empresas.html","/consultor/reportes":"pages/consultor/reportes.html","/dashboard":"pages/dashboard.html","/":"pages/index.html","/login":"pages/login.html","/registrar-cliente":"pages/registrar-cliente.html","/_error":"pages/_error.js","/_app":"pages/_app.js","/_document":"pages/_document.js","/404":"pages/404.html"}
+{
+  "/admin/barridos": "pages/admin/barridos.js",
+  "/admin/editar-usuario": "pages/admin/editar-usuario.js",
+  "/admin/": "pages/admin/.js",
+  "/admin/empresas": "pages/admin/empresas.js",
+  "/admin/matrices": "pages/admin/matrices.js",
+  "/admin/usuarios": "pages/admin/usuarios.js",
+  "/cambiar-contrasena": "pages/cambiar-contrasena.js",
+  "/cliente/carga-masiva": "pages/cliente/carga-masiva.js",
+  "/cliente/clientes": "pages/cliente/clientes.js",
+  "/cliente/registrar": "pages/cliente/registrar.js",
+  "/cliente/reportes": "pages/cliente/reportes.js",
+  "/cliente/transacciones": "pages/cliente/transacciones.js",
+  "/consultor/alertas": "pages/consultor/alertas.js",
+  "/consultor/empresas": "pages/consultor/empresas.js",
+  "/consultor/reportes": "pages/consultor/reportes.js",
+  "/dashboard": "pages/dashboard.js",
+  "/": "pages/index.js",
+  "/login": "pages/login.js",
+  "/registrar-cliente": "pages/registrar-cliente.js",
+  "/_error": "pages/_error.js",
+  "/_app": "pages/_app.js",
+  "/_document": "pages/_document.js"
+}
