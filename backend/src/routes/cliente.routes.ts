@@ -6,6 +6,7 @@ import ExcelJS from 'exceljs';
 const router = Router();
 
 export const clienteRoutes = (pool: Pool) => {
+  // ✅ Plantilla Excel
   router.get('/api/cliente/plantilla-excel', async (req: Request, res: Response) => {
     try {
       const workbook = new ExcelJS.Workbook();
@@ -48,6 +49,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
+  // ✅ Registro manual
   router.post('/api/cliente/registrar', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -116,6 +118,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
+  // ✅ Listar clientes
   router.get('/api/cliente/mis-clientes', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -151,6 +154,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
+  // ✅ Actualizar estado de cliente
   router.put('/api/cliente/:id/estado', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { estado } = req.body;
@@ -189,6 +193,7 @@ export const clienteRoutes = (pool: Pool) => {
     }
   });
 
+  // ✅ Carga masiva
   router.post('/api/carga-directa', async (req: Request, res: Response) => {
     const { csvContent } = req.body;
     if (!csvContent) {

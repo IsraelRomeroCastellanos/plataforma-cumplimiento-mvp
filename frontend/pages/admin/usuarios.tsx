@@ -11,37 +11,58 @@ export default function GestionUsuarios() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const userRaw = typeof window !== 'undefined' ? localStorage.getItem('user') : '{}';
-    const user = userRaw ? JSON.parse(userRaw) : {};
-
-    if (!token || user.role !== 'admin') {
-      router.push('/login');
-      return;
-    }
-
-    const fetchUsuarios = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get('/api/admin/usuarios', {
-          headers: { Authorization: `Bearer ${token}` }
+        const token = localStorage.getItem('token');
+        const userRaw = localStorage.getItem('user');
+        
+        if (!token || !userRaw) {
+          router.push('/login');
+          return;
+        }
+
+        const user = JSON.parse(userRaw);
+        if (user.role !== 'admin') {
+          router.push('/login');
+          return;
+        }
+
+        // ✅ Asegura que la solicitud incluya el token
+        const response = await axios.get('/api/admin/usuarios', {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
-        setUsuarios(res.data.usuarios || []);
+
+        // ✅ Procesa la respuesta correctamente
+        if (response.data && Array.isArray(response.data.usuarios)) {
+          setUsuarios(response.data.usuarios);
+        } else {
+          setError('Formato de respuesta inválido');
+        }
       } catch (err: any) {
-        console.error('Error al cargar usuarios:', err);
-        setError(err.response?.data?.error || 'Error al cargar usuarios');
+        console.error('Error detallado:', err);
+        if (err.response) {
+          setError(err.response.data?.error || 'Error del servidor');
+        } else if (err.request) {
+          setError('No se recibió respuesta del servidor');
+        } else {
+          setError('Error al configurar la solicitud');
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsuarios();
+    fetchData();
   }, [router]);
 
   if (loading) {
     return (
       <div>
         <Navbar />
-        <div style={{ padding: '2rem' }}>Cargando...</div>
+        <div style={{ padding: '2rem' }}>Cargando usuarios...</div>
       </div>
     );
   }
@@ -64,7 +85,6 @@ export default function GestionUsuarios() {
                 <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Rol</th>
                 <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Empresa</th>
                 <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Activo</th>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -77,20 +97,6 @@ export default function GestionUsuarios() {
                   <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{usuario.empresa_id || '-'}</td>
                   <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
                     {usuario.activo ? '✅' : '❌'}
-                  </td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
-                    <button
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Editar
-                    </button>
                   </td>
                 </tr>
               ))}
