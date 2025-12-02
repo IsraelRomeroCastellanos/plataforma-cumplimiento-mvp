@@ -27,7 +27,6 @@ export default function GestionUsuarios() {
           return;
         }
 
-        // ✅ Asegura que la solicitud incluya el token
         const response = await axios.get('/api/admin/usuarios', {
           headers: { 
             'Authorization': `Bearer ${token}`,
@@ -35,7 +34,6 @@ export default function GestionUsuarios() {
           }
         });
 
-        // ✅ Procesa la respuesta correctamente
         if (response.data && Array.isArray(response.data.usuarios)) {
           setUsuarios(response.data.usuarios);
         } else {
@@ -43,13 +41,7 @@ export default function GestionUsuarios() {
         }
       } catch (err: any) {
         console.error('Error detallado:', err);
-        if (err.response) {
-          setError(err.response.data?.error || 'Error del servidor');
-        } else if (err.request) {
-          setError('No se recibió respuesta del servidor');
-        } else {
-          setError('Error al configurar la solicitud');
-        }
+        setError(err.response?.data?.error || 'Error al cargar usuarios');
       } finally {
         setLoading(false);
       }
@@ -57,6 +49,12 @@ export default function GestionUsuarios() {
 
     fetchData();
   }, [router]);
+
+  const handleEdit = (usuario: any) => {
+    // ✅ Redirige a una página de edición (por ahora, solo logea)
+    console.log('Editar usuario:', usuario);
+    alert('Funcionalidad de edición en desarrollo');
+  };
 
   if (loading) {
     return (
@@ -85,6 +83,7 @@ export default function GestionUsuarios() {
                 <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Rol</th>
                 <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Empresa</th>
                 <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Activo</th>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -97,6 +96,21 @@ export default function GestionUsuarios() {
                   <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{usuario.empresa_id || '-'}</td>
                   <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
                     {usuario.activo ? '✅' : '❌'}
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+                    <button
+                      onClick={() => handleEdit(usuario)}
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Editar
+                    </button>
                   </td>
                 </tr>
               ))}
