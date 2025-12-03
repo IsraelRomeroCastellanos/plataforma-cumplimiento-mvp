@@ -1,10 +1,10 @@
-// src/app/dashboard/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { FiUsers, FiDatabase, FiFileText, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import Link from 'next/link'; // ¡Importación faltante!
 
 export default function Dashboard() {
   const [stats, setStats] = useState({

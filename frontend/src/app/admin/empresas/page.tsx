@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // Importar useCallback
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -14,27 +13,21 @@ export default function GestionEmpresas() {
   const router = useRouter();
   const [token, setToken] = useState<string>('');
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedToken && storedUser) {
-      const user = JSON.parse(storedUser);
-      if (user.rol === 'admin') {
-        setToken(storedToken);
-        fetchEmpresas(storedToken);
-      } else {
-        router.push('/login');
-      }
-    } else {
-      router.push('/login');
-    }
-  }, []);
-
-  const fetchEmpresas = async (authToken: string) => {
+  // Memorizar la función fetchEmpresas
+  const fetchEmpresas = useCallback(async (authToken: string) => {
     try {
       setLoading(true);
-      const data = await api.get('/api/admin/empresas', authToken);
+      const response = await fetch('/api/admin/empresas', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error al cargar empresas');
+      }
+      
+      const data = await response.json();
       
       if (data.empresas && Array.isArray(data.empresas)) {
         setEmpresas(data.empresas);
@@ -52,7 +45,24 @@ export default function GestionEmpresas() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]); // Incluir router como dependencia
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (storedToken && storedUser) {
+      const user = JSON.parse(storedUser);
+      if (user.rol === 'admin') {
+        setToken(storedToken);
+        fetchEmpresas(storedToken); // Ahora fetchEmpresas está memorizada
+      } else {
+        router.push('/login');
+      }
+    } else {
+      router.push('/login');
+    }
+  }, [router, fetchEmpresas]); // Incluir fetchEmpresas como dependencia
 
   const handleCrearEmpresa = () => {
     router.push('/admin/crear-empresa');

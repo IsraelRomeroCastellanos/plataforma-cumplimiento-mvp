@@ -1,10 +1,9 @@
-// src/app/login/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FiLogIn, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiLogIn, FiMail, FiLock, FiEye, FiEyeOff, FiAlertCircle, FiUser } from 'react-icons/fi'; // ¡Importaciones faltantes!
 import { toast } from 'react-toastify';
 
 export default function Login() {
@@ -108,7 +107,7 @@ export default function Login() {
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
               <div className="flex items-center space-x-2">
-                <FiAlertCircle size={18} />
+                <FiAlertCircle size={18} /> {/* Ahora está definido */}
                 <span>{error}</span>
               </div>
             </div>
@@ -226,7 +225,7 @@ export default function Login() {
                 className="w-full flex justify-center py-2 px-4 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 <span className="flex items-center space-x-2">
-                  <FiUser size={18} />
+                  <FiUser size={18} /> {/* Ahora está definido */}
                   <span>Registrar Nuevo Cliente</span>
                 </span>
               </Link>
