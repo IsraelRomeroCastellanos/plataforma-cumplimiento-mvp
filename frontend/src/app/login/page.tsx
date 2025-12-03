@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { toast } from 'react-toastify';
@@ -15,6 +15,24 @@ export default function Login() {
   const [error, setError] = useState('');
   const router = useRouter();
 
+  useEffect(() => {
+    // Verificar si ya hay una sesión activa
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    
+    if (token && user) {
+      const userData = JSON.parse(user);
+      // Redirigir según el rol del usuario
+      if (userData.rol === 'admin') {
+        router.push('/admin/usuarios');
+      } else if (userData.rol === 'cliente') {
+        router.push('/cliente/clientes');
+      } else {
+        router.push('/dashboard');
+      }
+    }
+  }, [router]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -26,6 +44,7 @@ export default function Login() {
     setError('');
 
     try {
+      // Llamar a la API sin tipos genéricos explícitos
       const response = await api.post('/api/login', formData);
       
       if (response.token && response.user) {

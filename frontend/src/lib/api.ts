@@ -9,7 +9,7 @@ const getBackendUrl = () => {
 };
 
 export const api = {
-  get: async <T>(endpoint: string, token?: string): Promise<T> => {
+  get: async (endpoint: string, token?: string) => {
     const url = `${getBackendUrl()}${endpoint}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -34,7 +34,7 @@ export const api = {
     return response.json();
   },
   
-  post: async <T, B>(endpoint: string, data: B, token?: string): Promise<T> => {
+  post: async (endpoint: string, data: any, token?: string) => {
     const url = `${getBackendUrl()}${endpoint}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ export const api = {
     return response.json();
   },
   
-  put: async <T, B>(endpoint: string, data: B, token?: string): Promise<T> => {
+  put: async (endpoint: string, data: any, token?: string) => {
     const url = `${getBackendUrl()}${endpoint}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

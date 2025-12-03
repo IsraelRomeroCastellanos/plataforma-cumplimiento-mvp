@@ -7,6 +7,13 @@ import { toast } from 'react-toastify';
 import Navbar from '@/components/Navbar';
 import { FiUploadCloud, FiDownload } from 'react-icons/fi';
 
+// Definir el tipo para la respuesta de carga masiva
+interface CargaMasivaResponse {
+  success: boolean;
+  count?: number;
+  message?: string;
+}
+
 export default function CargaMasiva() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [preview, setPreview] = useState<any[]>([]);
@@ -31,7 +38,7 @@ export default function CargaMasiva() {
     } else {
       router.push('/login');
     }
-  }, []);
+  }, [router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -140,14 +147,15 @@ María López,persona_fisica,consultoría fiscal,activo,marial`;
         try {
           const csvContent = event.target?.result as string;
           
-          // Enviar al backend
+          // Enviar al backend con tipado explícito
           const response = await api.post('/api/cliente/carga-masiva', {
             csvContent
           }, token);
           
           if (response.success) {
-            setMensaje(`✅ ${response.count} clientes procesados exitosamente`);
-            toast.success(`¡${response.count} clientes registrados correctamente!`);
+            const count = response.count || 0;
+            setMensaje(`✅ ${count} clientes procesados exitosamente`);
+            toast.success(`¡${count} clientes registrados correctamente!`);
             setArchivo(null);
             setPreview([]);
           } else {
@@ -276,11 +284,15 @@ María López,persona_fisica,consultoría fiscal,activo,marial`;
                       <tbody className="bg-white divide-y divide-gray-200">
                         {preview.map((row, index) => (
                           <tr key={index}>
-                            {Object.values(row).map((value, idx) => (
-                              <td key={idx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {value.toString()}
-                              </td>
-                            ))}
+			    {Object.values(row).map((value, idx) => (
+			      <td key={idx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+			       {value != null 
+			        ? (typeof value === 'object' 
+			        ? JSON.stringify(value) 
+		                : value.toString()) 
+			        : 'N/A'}
+			      </td>
+			    ))}                            
                           </tr>
                         ))}
                       </tbody>

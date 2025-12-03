@@ -1,40 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 
+// Definir el tipo para un usuario individual
+interface Usuario {
+  id: number;
+  nombre_completo: string;
+  email: string;
+  rol: string;
+  empresa_id?: number | null;
+  activo: boolean;
+}
+
 export default function GestionUsuarios() {
-  const [usuarios, setUsuarios] = useState<any[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const router = useRouter();
   const [token, setToken] = useState<string>('');
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedToken && storedUser) {
-      const user = JSON.parse(storedUser);
-      // Solo permitir acceso a administradores
-      if (user.rol === 'admin') {
-        setToken(storedToken);
-        fetchUsuarios(storedToken);
-      } else {
-        router.push('/login');
-      }
-    } else {
-      router.push('/login');
-    }
-  }, []);
-
-  const fetchUsuarios = async (authToken: string) => {
+  // Memorizar la función fetchUsuarios para evitar recrearla en cada render
+  const fetchUsuarios = useCallback(async (authToken: string) => {
     try {
       setLoading(true);
+      // Llamar a la API sin tipos genéricos explícitos
       const data = await api.get('/api/admin/usuarios', authToken);
       
       if (data.usuarios && Array.isArray(data.usuarios)) {
@@ -53,7 +47,25 @@ export default function GestionUsuarios() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (storedToken && storedUser) {
+      const user = JSON.parse(storedUser);
+      // Solo permitir acceso a administradores
+      if (user.rol === 'admin') {
+        setToken(storedToken);
+        fetchUsuarios(storedToken);
+      } else {
+        router.push('/login');
+      }
+    } else {
+      router.push('/login');
+    }
+  }, [router, fetchUsuarios]);
 
   const handleDesactivar = async (id: number) => {
     if (!window.confirm('¿Estás seguro de que deseas desactivar este usuario?')) return;
