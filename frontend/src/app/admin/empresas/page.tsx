@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react'; // Importar useCallback
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
 import { toast } from 'react-toastify';
-import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 
 export default function GestionEmpresas() {
@@ -13,21 +13,27 @@ export default function GestionEmpresas() {
   const router = useRouter();
   const [token, setToken] = useState<string>('');
 
-  // Memorizar la función fetchEmpresas
-  const fetchEmpresas = useCallback(async (authToken: string) => {
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (storedToken && storedUser) {
+      const user = JSON.parse(storedUser);
+      if (user.rol === 'admin') {
+        setToken(storedToken);
+        fetchEmpresas(storedToken);
+      } else {
+        router.push('/login');
+      }
+    } else {
+      router.push('/login');
+    }
+  }, []);
+
+  const fetchEmpresas = async (authToken: string) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/empresas', {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Error al cargar empresas');
-      }
-      
-      const data = await response.json();
+      const data = await api.get('/api/admin/empresas', authToken);
       
       if (data.empresas && Array.isArray(data.empresas)) {
         setEmpresas(data.empresas);
@@ -45,24 +51,7 @@ export default function GestionEmpresas() {
     } finally {
       setLoading(false);
     }
-  }, [router]); // Incluir router como dependencia
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedToken && storedUser) {
-      const user = JSON.parse(storedUser);
-      if (user.rol === 'admin') {
-        setToken(storedToken);
-        fetchEmpresas(storedToken); // Ahora fetchEmpresas está memorizada
-      } else {
-        router.push('/login');
-      }
-    } else {
-      router.push('/login');
-    }
-  }, [router, fetchEmpresas]); // Incluir fetchEmpresas como dependencia
+  };
 
   const handleCrearEmpresa = () => {
     router.push('/admin/crear-empresa');
@@ -108,7 +97,7 @@ export default function GestionEmpresas() {
                 <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Nombre Legal</th>
                 <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">RFC</th>
                 <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Dirección</th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Activa</th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
@@ -121,9 +110,11 @@ export default function GestionEmpresas() {
                   <td className="px-3 py-4 text-sm text-gray-500">{empresa.direccion}</td>
                   <td className="px-3 py-4 text-sm text-gray-500">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      empresa.activa ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      empresa.estado === 'activo' ? 'bg-green-100 text-green-800' : 
+                      empresa.estado === 'inactivo' ? 'bg-red-100 text-red-800' : 
+                      'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {empresa.activa ? 'Activa' : 'Inactiva'}
+                      {empresa.estado}
                     </span>
                   </td>
                 </tr>
