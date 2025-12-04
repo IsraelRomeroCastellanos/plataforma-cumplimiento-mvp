@@ -1,14 +1,14 @@
+// src/app/admin/editar-usuario/[id]/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { api } from '@/lib/api';
-import { toast } from 'react-toastify';
+import axios from 'axios';
 import Navbar from '@/components/Navbar';
-import { FiArrowLeft } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 
 export default function EditarUsuario() {
-  const [usuario, setUsuario] = useState({
+  const [formData, setFormData] = useState({
     email: '',
     nombre_completo: '',
     rol: 'consultor',
@@ -21,6 +21,40 @@ export default function EditarUsuario() {
   const router = useRouter();
   const { id } = useParams();
   const [token, setToken] = useState<string>('');
+
+  const fetchUsuario = useCallback(async (authToken: string, userId: string) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`/api/admin/usuarios/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      
+      if (response.data && response.data.usuario) {
+        const usuario = response.data.usuario;
+        setFormData({
+          email: usuario.email,
+          nombre_completo: usuario.nombre_completo,
+          rol: usuario.rol,
+          empresa_id: usuario.empresa_id ? usuario.empresa_id.toString() : '',
+          activo: usuario.activo
+        });
+      } else {
+        setError('Usuario no encontrado');
+      }
+    } catch (err: any) {
+      console.error('Error al cargar usuario:', err);
+      setError(err.response?.data?.error || 'Error al cargar usuario');
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        router.push('/login');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -39,36 +73,7 @@ export default function EditarUsuario() {
     } else {
       router.push('/login');
     }
-  }, [id, router]);
-
-  const fetchUsuario = async (authToken: string, userId: string) => {
-    try {
-      setLoading(true);
-      const data = await api.get(`/api/admin/usuarios/${userId}`, authToken);
-      
-      if (data.usuario) {
-        setUsuario({
-          email: data.usuario.email,
-          nombre_completo: data.usuario.nombre_completo,
-          rol: data.usuario.rol,
-          empresa_id: data.usuario.empresa_id ? data.usuario.empresa_id.toString() : '',
-          activo: data.usuario.activo
-        });
-      } else {
-        setError('Usuario no encontrado');
-      }
-    } catch (err: any) {
-      console.error('Error al cargar usuario:', err);
-      setError(err.message || 'Error al cargar usuario');
-      if (err.message?.includes('401') || err.message?.includes('403')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        router.push('/login');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [id, router, fetchUsuario]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,29 +81,24 @@ export default function EditarUsuario() {
     setError('');
 
     try {
-      // Validar campos según rol
-      if (usuario.rol === 'cliente' && !usuario.empresa_id) {
-        throw new Error('Los clientes deben estar vinculados a una empresa');
-      }
-      
-      if ((usuario.rol === 'admin' || usuario.rol === 'consultor') && usuario.empresa_id) {
-        throw new Error('Los administradores y consultores no pueden tener empresa asignada');
-      }
-
-      await api.put(`/api/admin/usuarios/${id}`, {
-        email: usuario.email,
-        nombre_completo: usuario.nombre_completo,
-        rol: usuario.rol,
-        empresa_id: usuario.empresa_id ? parseInt(usuario.empresa_id) : null,
-        activo: usuario.activo
-      }, token);
+      await axios.put(`/api/admin/usuarios/${id}`, {
+        email: formData.email,
+        nombre_completo: formData.nombre_completo,
+        rol: formData.rol,
+        empresa_id: formData.empresa_id ? parseInt(formData.empresa_id) : null,
+        activo: formData.activo
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       
       toast.success('Usuario actualizado correctamente');
       router.push('/admin/usuarios');
     } catch (err: any) {
       console.error('Error al actualizar usuario:', err);
-      setError(err.message || 'Error al actualizar usuario');
-      toast.error(err.message || 'Error al actualizar usuario');
+      setError(err.response?.data?.error || 'Error al actualizar usuario');
+      toast.error(err.response?.data?.error || 'Error al actualizar usuario');
     } finally {
       setSaving(false);
     }
@@ -109,37 +109,29 @@ export default function EditarUsuario() {
     
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
-      setUsuario(prev => ({ ...prev, activo: checked }));
+      setFormData(prev => ({ ...prev, activo: checked }));
     } else {
-      setUsuario(prev => ({ ...prev, [name]: value }));
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-lg text-gray-600">Cargando usuario...</div>
-          </div>
-        </main>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg text-gray-600">Cargando usuario...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-6 flex items-center">
-            <button
-              onClick={() => router.push('/admin/usuarios')}
-              className="flex items-center text-blue-600 hover:text-blue-800 mr-4"
-            >
-              <FiArrowLeft size={20} />
-            </button>
+      <main className="max-w-2xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Editar Usuario</h1>
           </div>
 
@@ -151,7 +143,7 @@ export default function EditarUsuario() {
 
           <div className="bg-white shadow rounded-lg p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                     Email
@@ -161,7 +153,7 @@ export default function EditarUsuario() {
                     name="email"
                     type="email"
                     required
-                    value={usuario.email}
+                    value={formData.email}
                     onChange={handleChange}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
@@ -176,7 +168,7 @@ export default function EditarUsuario() {
                     name="nombre_completo"
                     type="text"
                     required
-                    value={usuario.nombre_completo}
+                    value={formData.nombre_completo}
                     onChange={handleChange}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
@@ -189,7 +181,7 @@ export default function EditarUsuario() {
                   <select
                     id="rol"
                     name="rol"
-                    value={usuario.rol}
+                    value={formData.rol}
                     onChange={handleChange}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     required
@@ -200,21 +192,7 @@ export default function EditarUsuario() {
                   </select>
                 </div>
 
-                <div>
-                  <label htmlFor="activo" className="flex items-center">
-                    <input
-                      id="activo"
-                      name="activo"
-                      type="checkbox"
-                      checked={usuario.activo}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Usuario activo</span>
-                  </label>
-                </div>
-
-                {usuario.rol === 'cliente' && (
+                {formData.rol === 'cliente' && (
                   <div>
                     <label htmlFor="empresa_id" className="block text-sm font-medium text-gray-700">
                       ID de la Empresa
@@ -224,7 +202,7 @@ export default function EditarUsuario() {
                       name="empresa_id"
                       type="number"
                       min="1"
-                      value={usuario.empresa_id}
+                      value={formData.empresa_id}
                       onChange={handleChange}
                       className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     />
@@ -233,12 +211,26 @@ export default function EditarUsuario() {
                     </p>
                   </div>
                 )}
+
+                <div className="sm:col-span-2">
+                  <label htmlFor="activo" className="flex items-center">
+                    <input
+                      id="activo"
+                      name="activo"
+                      type="checkbox"
+                      checked={formData.activo}
+                      onChange={handleChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Usuario activo</span>
+                  </label>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => router.push('/admin/usuarios')}
+                  onClick={() => router.back()}
                   className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
                   Cancelar

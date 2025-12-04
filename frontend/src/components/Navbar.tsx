@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FiLogOut, FiMenu, FiX, FiUser, FiShield, FiDatabase, FiUpload, FiFile } from 'react-icons/fi';
+import { FiLogOut } from 'react-icons/fi';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -25,46 +25,45 @@ export default function Navbar() {
     router.push('/login');
   };
 
-  // Menú completo con roles y secciones
   const menuItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: FiUser, role: 'all' },
-    { href: '/admin/usuarios', label: 'Gestión de Usuarios', icon: FiShield, role: 'admin' },
-    { href: '/admin/empresas', label: 'Gestión de Empresas', icon: FiDatabase, role: 'admin' },
-    { href: '/cliente/clientes', label: 'Mis Clientes', icon: FiFile, role: 'cliente' },
-    { href: '/cliente/carga-masiva', label: 'Carga Masiva', icon: FiUpload, role: 'cliente' },
+    { href: '/dashboard', label: 'Dashboard', role: 'all' },
+    { href: '/admin/usuarios', label: 'Gestión de Usuarios', role: 'admin' },
+    { href: '/admin/empresas', label: 'Gestión de Empresas', role: 'admin' },
+    { href: '/cliente/clientes', label: 'Mis Clientes', role: 'cliente' },
+    { href: '/cliente/clientes', label: 'Gestión de Clientes', role: 'consultor' },
+    { href: '/cliente/carga-masiva', label: 'Carga Masiva', role: 'all' },
+    { href: '/cliente/registrar-cliente', label: 'Registrar Cliente', role: 'all' },
   ];
 
   const shouldShowItem = (item: any) => {
     if (!user) return false;
     if (item.role === 'all') return true;
+    if (item.role === 'cliente' && user.rol === 'cliente') return true;
+    if (item.role === 'consultor' && (user.rol === 'consultor' || user.rol === 'admin')) return true;
     return user.rol === item.role;
   };
 
   return (
-    <nav className="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg">
+    <nav className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="bg-white text-blue-600 rounded-full p-1">
-                <FiShield size={24} />
-              </div>
-              <span className="text-xl font-bold">Sistema de Cumplimiento</span>
+            <Link href="/" className="text-xl font-bold text-blue-600">
+              Sistema de Cumplimiento
             </Link>
           </div>
           
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden md:flex items-center space-x-8">
             {menuItems.map((item) => {
               if (shouldShowItem(item)) {
                 return (
                   <Link 
                     key={item.href} 
                     href={item.href} 
-                    className="flex items-center space-x-1 hover:text-blue-200 transition-colors py-2 px-3 rounded-md hover:bg-blue-700"
+                    className="text-gray-700 hover:text-blue-600 font-medium"
                   >
-                    <item.icon size={16} />
-                    <span>{item.label}</span>
+                    {item.label}
                   </Link>
                 );
               }
@@ -72,17 +71,15 @@ export default function Navbar() {
             })}
             
             {user && (
-              <div className="flex items-center space-x-4 ml-4 pl-4 border-l border-blue-400">
-                <div className="flex flex-col items-end">
-                  <span className="font-semibold">{user.nombre_completo}</span>
-                  <span className="text-xs text-blue-200 capitalize">{user.rol}</span>
-                </div>
+              <div className="flex items-center space-x-4">
+                <span className="text-gray-700">
+                  Bienvenido, {user.nombre_completo}
+                </span>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-1 hover:text-blue-200 transition-colors py-2 px-3 rounded-md hover:bg-blue-700"
+                  className="flex items-center text-gray-700 hover:text-red-600"
                 >
-                  <FiLogOut size={16} />
-                  <span>Cerrar sesión</span>
+                  <FiLogOut className="mr-1" /> Cerrar sesión
                 </button>
               </div>
             )}
@@ -90,7 +87,7 @@ export default function Navbar() {
             {!user && (
               <Link 
                 href="/login" 
-                className="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50 transition-colors"
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
               >
                 Iniciar Sesión
               </Link>
@@ -101,9 +98,15 @@ export default function Navbar() {
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-white focus:outline-none"
+              className="text-gray-700 focus:outline-none"
             >
-              {isOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {isOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                )}
+              </svg>
             </button>
           </div>
         </div>
@@ -111,19 +114,18 @@ export default function Navbar() {
       
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden bg-blue-700 py-4">
-          <div className="px-2 space-y-1 sm:px-3">
+        <div className="md:hidden">
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {menuItems.map((item) => {
               if (shouldShowItem(item)) {
                 return (
                   <Link 
                     key={item.href} 
                     href={item.href} 
-                    className="flex items-center space-x-2 block px-4 py-3 rounded-md text-base font-medium text-white hover:bg-blue-600"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
                     onClick={() => setIsOpen(false)}
                   >
-                    <item.icon size={18} />
-                    <span>{item.label}</span>
+                    {item.label}
                   </Link>
                 );
               }
@@ -132,21 +134,19 @@ export default function Navbar() {
             
             {user && (
               <>
-                <div className="block px-4 py-3 text-base font-medium text-white">
-                  <div className="flex flex-col">
-                    <span>{user.nombre_completo}</span>
-                    <span className="text-sm text-blue-200 capitalize">{user.rol}</span>
-                  </div>
+                <div className="block px-3 py-2 text-base font-medium text-gray-700">
+                  Bienvenido, {user.nombre_completo}
                 </div>
                 <button
                   onClick={() => {
                     handleLogout();
                     setIsOpen(false);
                   }}
-                  className="flex items-center space-x-2 w-full text-left px-4 py-3 rounded-md text-base font-medium text-white hover:bg-blue-600"
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-red-600 hover:bg-gray-50"
                 >
-                  <FiLogOut size={18} />
-                  <span>Cerrar sesión</span>
+                  <div className="flex items-center">
+                    <FiLogOut className="mr-2" /> Cerrar sesión
+                  </div>
                 </button>
               </>
             )}
@@ -154,11 +154,10 @@ export default function Navbar() {
             {!user && (
               <Link 
                 href="/login" 
-                className="flex items-center space-x-2 block px-4 py-3 rounded-md text-base font-medium bg-white text-blue-600 hover:bg-blue-50"
+                className="block px-3 py-2 rounded-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700"
                 onClick={() => setIsOpen(false)}
               >
-                <FiLogOut size={18} />
-                <span>Iniciar Sesión</span>
+                Iniciar Sesión
               </Link>
             )}
           </div>
