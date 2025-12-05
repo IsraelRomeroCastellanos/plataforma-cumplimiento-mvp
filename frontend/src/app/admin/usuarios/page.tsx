@@ -1,10 +1,9 @@
-// src/app/admin/usuarios/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
+import Navbar from '../../../components/Navbar';
 import { toast } from 'react-toastify';
 
 export default function GestionUsuarios() {
@@ -17,7 +16,10 @@ export default function GestionUsuarios() {
   const fetchUsuarios = useCallback(async (authToken: string) => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/admin/usuarios', {
+      
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://plataforma-cumplimiento-mvp.onrender.com';
+      
+      const response = await axios.get(`${backendUrl}/api/admin/usuarios`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -41,6 +43,27 @@ export default function GestionUsuarios() {
     }
   }, [router]);
 
+  const handleDesactivar = async (id: number) => {
+    if (!window.confirm('¿Estás seguro de que deseas desactivar este usuario?')) return;
+    
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://plataforma-cumplimiento-mvp.onrender.com';
+      
+      await axios.put(`${backendUrl}/api/admin/usuarios/${id}/desactivar`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      toast.success('Usuario desactivado correctamente');
+      fetchUsuarios(token);
+    } catch (err: any) {
+      console.error('Error al desactivar usuario:', err);
+      setError(err.response?.data?.error || 'Error al desactivar usuario');
+      toast.error(err.response?.data?.error || 'Error al desactivar usuario');
+    }
+  };
+
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
@@ -57,35 +80,6 @@ export default function GestionUsuarios() {
       router.push('/login');
     }
   }, [router, fetchUsuarios]);
-
-  const handleDesactivar = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de que deseas desactivar este usuario?')) return;
-    
-    try {
-      await axios.put(`/api/admin/usuarios/${id}/desactivar`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      toast.success('Usuario desactivado correctamente');
-      fetchUsuarios(token);
-    } catch (err: any) {
-      console.error('Error al desactivar usuario:', err);
-      toast.error(err.response?.data?.error || 'Error al desactivar usuario');
-    }
-  };
-
-  const handleVerDetalle = (id: number) => {
-    router.push(`/admin/usuarios/${id}`);
-  };
-
-  const handleEditar = (id: number) => {
-    router.push(`/admin/editar-usuario/${id}`);
-  };
-
-  const handleCrearUsuario = () => {
-    router.push('/admin/crear-usuario');
-  };
 
   if (loading) {
     return (
@@ -106,7 +100,7 @@ export default function GestionUsuarios() {
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
             <button
-              onClick={handleCrearUsuario}
+              onClick={() => router.push('/admin/crear-usuario')}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
             >
               Crear Usuario
@@ -160,22 +154,22 @@ export default function GestionUsuarios() {
                       </span>
                     </td>
                     <td className="px-3 py-4 text-sm text-gray-500">
-                      <div className="flex space-x-3">
+                      <div className="flex space-x-2">
                         <button
-                          onClick={() => handleVerDetalle(usuario.id)}
+                          onClick={() => router.push(`/admin/usuarios/${usuario.id}`)}
                           className="text-indigo-600 hover:text-indigo-900"
                         >
                           Ver
                         </button>
                         <button
-                          onClick={() => handleEditar(usuario.id)}
+                          onClick={() => router.push(`/admin/editar-usuario/${usuario.id}`)}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           Editar
                         </button>
-                        {usuario.activo && (
+                        {usuario.activo && usuario.email !== 'admin@cumplimiento.com' && (
                           <button
-                            onClick={() => () => handleDesactivar(usuario.id)}
+                            onClick={() => handleDesactivar(usuario.id)}
                             className="text-red-600 hover:text-red-900"
                           >
                             Desactivar
@@ -188,7 +182,7 @@ export default function GestionUsuarios() {
               </tbody>
             </table>
 
-            {usuarios.length === 0 && (
+            {usuarios.length === 0 && !error && (
               <div className="text-center py-8 text-gray-500">
                 No se encontraron usuarios
               </div>

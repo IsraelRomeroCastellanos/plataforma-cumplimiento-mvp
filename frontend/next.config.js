@@ -7,19 +7,20 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
   async rewrites() {
-    // Usa URL de Render para producción, localhost para desarrollo
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
                       (process.env.NODE_ENV === 'production' 
                          ? 'https://plataforma-cumplimiento-mvp.onrender.com' 
                          : 'http://localhost:10000');
-    
-    console.log('🌐 Configurando proxy a:', backendUrl);
     
     return [
       {
         source: '/api/:path*',
         destination: `${backendUrl}/api/:path*`,
       },
+      {
+        source: '/cliente/registrar-cliente',
+        destination: '/registrar-cliente',
+      }
     ];
   },
   async headers() {

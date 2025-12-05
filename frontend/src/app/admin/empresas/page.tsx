@@ -1,10 +1,9 @@
-// src/app/admin/empresas/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
+import Navbar from '../../../components/Navbar';
 import { toast } from 'react-toastify';
 
 export default function GestionEmpresas() {
@@ -17,7 +16,10 @@ export default function GestionEmpresas() {
   const fetchEmpresas = useCallback(async (authToken: string) => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/admin/empresas', {
+      
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://plataforma-cumplimiento-mvp.onrender.com';
+      
+      const response = await axios.get(`${backendUrl}/api/admin/empresas`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -58,18 +60,6 @@ export default function GestionEmpresas() {
     }
   }, [router, fetchEmpresas]);
 
-  const handleVerDetalle = (id: number) => {
-    router.push(`/admin/empresas/${id}`);
-  };
-
-  const handleEditar = (id: number) => {
-    router.push(`/admin/editar-empresa/${id}`);
-  };
-
-  const handleCrearEmpresa = () => {
-    router.push('/admin/crear-empresa');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -89,7 +79,7 @@ export default function GestionEmpresas() {
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Gestión de Empresas</h1>
             <button
-              onClick={handleCrearEmpresa}
+              onClick={() => router.push('/admin/crear-empresa')}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
             >
               Crear Empresa
@@ -110,7 +100,6 @@ export default function GestionEmpresas() {
                   <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Nombre Legal</th>
                   <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">RFC</th>
                   <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Dirección</th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tipo Entidad</th>
                   <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Estado</th>
                   <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Acciones</th>
                 </tr>
@@ -123,14 +112,7 @@ export default function GestionEmpresas() {
                     </td>
                     <td className="px-3 py-4 text-sm text-gray-500">{empresa.nombre_legal}</td>
                     <td className="px-3 py-4 text-sm text-gray-500">{empresa.rfc}</td>
-                    <td className="px-3 py-4 text-sm text-gray-500">{empresa.direccion || 'Sin dirección'}</td>
-                    <td className="px-3 py-4 text-sm text-gray-500">
-                      <span className={`px-2 inline-flex text-xs font-semibold rounded-full ${
-                        empresa.tipo_entidad === 'persona_moral' ? 'bg-purple-100 text-purple-800' : 'bg-pink-100 text-pink-800'
-                      }`}>
-                        {empresa.tipo_entidad === 'persona_moral' ? 'Persona Moral' : 'Persona Física'}
-                      </span>
-                    </td>
+                    <td className="px-3 py-4 text-sm text-gray-500">{empresa.direccion || 'N/A'}</td>
                     <td className="px-3 py-4 text-sm text-gray-500">
                       <span className={`px-2 inline-flex text-xs font-semibold rounded-full ${
                         empresa.estado === 'activo' ? 'bg-green-100 text-green-800' :
@@ -141,15 +123,15 @@ export default function GestionEmpresas() {
                       </span>
                     </td>
                     <td className="px-3 py-4 text-sm text-gray-500">
-                      <div className="flex space-x-3">
+                      <div className="flex space-x-2">
                         <button
-                          onClick={() => handleVerDetalle(empresa.id)}
+                          onClick={() => router.push(`/admin/empresas/${empresa.id}`)}
                           className="text-indigo-600 hover:text-indigo-900"
                         >
                           Ver
                         </button>
                         <button
-                          onClick={() => handleEditar(empresa.id)}
+                          onClick={() => router.push(`/admin/editar-empresa/${empresa.id}`)}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           Editar
@@ -161,7 +143,7 @@ export default function GestionEmpresas() {
               </tbody>
             </table>
 
-            {empresas.length === 0 && (
+            {empresas.length === 0 && !error && (
               <div className="text-center py-8 text-gray-500">
                 No se encontraron empresas
               </div>
