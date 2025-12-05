@@ -7,10 +7,13 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
   async rewrites() {
+    // Determinar URL de backend según entorno
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
                       (process.env.NODE_ENV === 'production' 
                          ? 'https://plataforma-cumplimiento-mvp.onrender.com' 
                          : 'http://localhost:10000');
+    
+    console.log('🌐 Configurando proxy a:', backendUrl);
     
     return [
       {
