@@ -7,7 +7,7 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
   
-  // ✅ CONFIGURACIÓN DE REESCRITURAS DEFINITIVA
+  // ✅ REESCRITURAS DEFINITIVAS - funciona en todos los entornos
   async rewrites() {
     // ✅ DETERMINAR URL DE BACKEND SEGÚN ENTORNO
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
