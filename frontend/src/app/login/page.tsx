@@ -15,13 +15,11 @@ export default function Login() {
   const router = useRouter();
 
   useEffect(() => {
-    // Verificar si ya hay sesión activa
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
     
     if (token && user) {
       const userData = JSON.parse(user);
-      // Redirigir según rol
       if (userData.rol === 'admin') {
         router.push('/dashboard');
       } else if (userData.rol === 'cliente' || userData.rol === 'consultor') {
@@ -43,12 +41,11 @@ export default function Login() {
     setError('');
   
     try {
-      // Validar entradas
       if (!formData.email || !formData.password) {
         throw new Error('Por favor ingresa email y contraseña');
       }
   
-      // URL del backend con fallback seguro
+      // ✅ URL DEL BACKEND SIEMPRE DESDE VARIABLES DE ENTORNO
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://plataforma-cumplimiento-mvp.onrender.com';
       
       console.log('🔍 Intentando login en:', `${backendUrl}/api/login`);
@@ -63,35 +60,32 @@ export default function Login() {
         credentials: 'include'
       });
   
-      // Verificar si la respuesta es JSON antes de parsear
+      // ✅ VERIFICAR SI LA RESPUESTA ES JSON ANTES DE PARSEAR
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const textResponse = await response.text();
-        throw new Error(`El servidor respondió con HTML en lugar de JSON: ${textResponse.substring(0, 100)}...`);
+        
+        // ✅ DETECTAR SI ES UNA PÁGINA HTML (error 404)
+        if (textResponse.includes('<!DOCTYPE html>') || textResponse.includes('<html')) {
+          throw new Error('Error de configuración del servidor. El backend está respondiendo con HTML en lugar de JSON.');
+        }
+        
+        throw new Error(`Respuesta inesperada del servidor: ${textResponse.substring(0, 100)}...`);
       }
   
       const data = await response.json();
       console.log('📡 Respuesta del backend:', data);
   
       if (!response.ok) {
-        // Manejar errores específicos con mayor detalle
-        if (data.error === 'Credenciales inválidas') {
-          throw new Error('Email o contraseña incorrectos');
-        } else if (data.error === 'Usuario desactivado') {
-          throw new Error('Tu cuenta está desactivada. Contacta al administrador.');
-        } else {
-          throw new Error(data.error || `Error ${response.status}: ${response.statusText}`);
-        }
+        throw new Error(data.error || `Error ${response.status}: ${response.statusText}`);
       }
   
       if (data.token && data.user) {
-        // Guardar token y usuario en localStorage
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         
         toast.success('¡Inicio de sesión exitoso!');
         
-        // Redirigir según rol
         switch (data.user.rol) {
           case 'admin':
             router.push('/dashboard');
@@ -110,26 +104,19 @@ export default function Login() {
     } catch (err: any) {
       console.error('🚨 Error en login:', err);
       
-      // Manejo de errores específicos para diagnóstico
-      let errorMessage = 'Error al iniciar sesión. Por favor verifica tus credenciales.';
+      // ✅ MANEJO ESPECÍFICO DE ERRORES CORS
+      let errorMessage = err.message || 'Error al iniciar sesión. Por favor verifica tus credenciales.';
       
-      if (err.message.includes('Failed to fetch')) {
-        errorMessage = 'No se puede conectar con el servidor. Verifica tu conexión a internet y que el backend esté funcionando.';
-      } else if (err.message.includes('CORS')) {
+      if (err.message && err.message.includes('CORS')) {
         errorMessage = 'Error de conexión entre servicios. Contacta al administrador del sistema.';
-      } else if (err.message.includes('500')) {
-        errorMessage = 'Error interno del servidor. Intenta nuevamente en unos minutos.';
-      } else if (err.message.includes('HTML en lugar de JSON')) {
+      } else if (err.message && err.message.includes('HTML en lugar de JSON')) {
         errorMessage = 'Error de configuración del servidor. El backend está respondiendo con HTML en lugar de JSON.';
+      } else if (err.message && err.message.includes('Failed to fetch')) {
+        errorMessage = 'No se puede conectar con el servidor. Verifica tu conexión a internet y que el backend esté funcionando.';
       }
       
       setError(errorMessage);
       toast.error(errorMessage);
-      
-      // Para diagnóstico en desarrollo
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Detalles del error (solo desarrollo):', err);
-      }
     } finally {
       setLoading(false);
     }
@@ -193,15 +180,7 @@ export default function Login() {
                 disabled={loading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                {loading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Iniciando sesión...
-                  </span>
-                ) : 'Iniciar Sesión'}
+                {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
               </button>
             </div>
           </form>
@@ -230,9 +209,9 @@ export default function Login() {
 
           <div className="mt-8 pt-6 border-t border-gray-200">
             <div className="text-center text-sm text-gray-500">
-              <p className="font-medium">Credenciales de prueba:</p>
-              <p className="text-blue-600">Email: admin@pruebas.com</p>
-              <p className="text-blue-600">Contraseña: Admin123!</p>
+              <p>Credenciales de prueba:</p>
+              <p className="font-medium text-blue-600">Email: admin@pruebas.com</p>
+              <p className="font-medium text-blue-600">Contraseña: Admin123!</p>
             </div>
           </div>
         </div>

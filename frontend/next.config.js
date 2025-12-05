@@ -6,8 +6,10 @@ const nextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
+  
+  // ✅ CONFIGURACIÓN DE REESCRITURAS DEFINITIVA
   async rewrites() {
-    // Determinar URL de backend según entorno
+    // ✅ DETERMINAR URL DE BACKEND SEGÚN ENTORNO
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
                       (process.env.NODE_ENV === 'production' 
                          ? 'https://plataforma-cumplimiento-mvp.onrender.com' 
@@ -26,6 +28,8 @@ const nextConfig = {
       }
     ];
   },
+  
+  // ✅ CABECERAS CORS PARA TODAS LAS SOLICITUDES
   async headers() {
     return [
       {
@@ -42,7 +46,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: '*',
+            value: '*',  // ✅ PERMITIR TODOS LOS ORÍGENES PARA LAS API
           },
           {
             key: 'Access-Control-Allow-Methods',

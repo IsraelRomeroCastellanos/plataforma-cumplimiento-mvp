@@ -13,9 +13,13 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Configuración CORS ROBUSTA para todos los entornos
+// ✅ CONFIGURACIÓN CORS DEFINITIVA - acepta todos los orígenes necesarios
 const corsOptions = {
   origin: function (origin: any, callback: any) {
+    // Permitir solicitudes sin origin (como Postman, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    
+    // Lista de orígenes permitidos
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:8080',
@@ -24,27 +28,24 @@ const corsOptions = {
       'https://plataforma-cumplimiento-mvp.onrender.com'
     ];
     
-    // Permitir solicitudes sin origin (como Postman, curl, server-to-server)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = `The CORS policy for this site does not allow access from the specified Origin.`;
-      return callback(new Error(msg), false);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
     }
-    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin']
 };
 
-// Middleware CORS antes de cualquier ruta
+// ✅ MIDDLEWARE CORS - debe ir ANTES de cualquier ruta
 app.use(cors(corsOptions));
 
-// Pre-flight requests
+// ✅ MANEJO DE OPTIONS (preflight requests)
 app.options('*', cors(corsOptions));
 
-// Otro middleware
+// ✅ OTRO MIDDLEWARE
 app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: '/tmp/',
@@ -53,7 +54,7 @@ app.use(fileUpload({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Configuración de la base de datos
+// ✅ CONFIGURACIÓN DE BASE DE DATOS
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { 
@@ -61,34 +62,28 @@ const pool = new Pool({
   } : false,
 });
 
-// Rutas - ¡CRÍTICO: Mantener este orden!
+// ✅ RUTAS - orden crítico
 app.use('/api/login', authRoutes(pool));
 app.use('/api/cliente', clienteRoutes(pool));
 app.use('/api/admin', adminRoutes(pool));
 
-// Rutas públicas
+// ✅ RUTAS PÚBLICAS Y DE REDIRECCIÓN
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: "OK",
     timestamp: new Date().toISOString(),
-    node_env: process.env.NODE_ENV,
-    database_connected: !!pool
+    node_env: process.env.NODE_ENV
   });
 });
 
-// Rutas de redirección para compatibilidad
-app.get('/cliente/registrar-cliente', (req, res) => {
-  res.redirect('/registrar-cliente');
-});
-
-// Manejador de errores global - RESPONDER SIEMPRE JSON
+// ✅ MANEJADOR DE ERRORES GLOBAL - SIEMPRE RESPONDE JSON
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error global:', {
     message: err.message,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
   
-  // Siempre responder JSON, incluso en errores
+  // ✅ SIEMPRE RESPONDER JSON, INCLUSO EN ERRORES
   res.status(500).json({ 
     error: 'Internal server error',
     timestamp: new Date().toISOString()
@@ -98,7 +93,6 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 app.listen(port, () => {
   console.log(`✅ Backend corriendo en puerto ${port}`);
   console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Base de datos: ${process.env.DATABASE_URL ? 'Configurada' : 'No configurada'}`);
 });
 
 export default app;
